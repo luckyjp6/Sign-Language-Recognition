@@ -117,21 +117,23 @@ public class MainActivity extends AppCompatActivity {
                 int length= buffer.remaining();
                 byte[] bytes= new byte[length];
                 buffer.get(bytes);
-
-//                Bitmap bitmap = BitmapFactory.decodeByteArray(bytes,0,length);
-//                String imageString = getStringImage(bitmap);
-
                 image.close();
-                PyObject aiModule = py.getModule("hello_file");
-                byte[] result = aiModule.callAttr("hello_func", bytes).toJava(byte[].class);
+
+//                Rotate image and show the preview
+                PyObject rotateModule = py.getModule("Rotation");
+                byte[] rotationResult = rotateModule.callAttr("rotation_func", bytes).toJava(byte[].class);
+
+                Bitmap bmp = BitmapFactory.decodeByteArray(rotationResult, 0, rotationResult.length);
+                ImageView displayPicture = findViewById(R.id.picture);
+                displayPicture.setImageBitmap(bmp);
+
+//                TODO: Add AI entry point here!!
+//                PyObject aiModule = py.getModule("AI_file");
+//                String aiResult = aiModule.callAttr("func_name", rotationResult).toJava(String.class);
 
 //                String result = aiModule.callAttr("hello_func", bytes).toJava(String.class);
 //                TextView txt = findViewById(R.id.textView);
 //                txt.setText(result);
-
-                Bitmap bmp = BitmapFactory.decodeByteArray(result, 0, result.length);
-                ImageView displayPicture = findViewById(R.id.picture);
-                displayPicture.setImageBitmap(bmp);
             }
         }, null);
 

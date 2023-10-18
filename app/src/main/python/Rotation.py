@@ -3,7 +3,7 @@ import cv2
 import base64
 
 i = 0
-def hello_func(data):
+def rotation_func(data):
     # decoded_data = base64.b64decode(data)
     # np_data = np.fromstring(decoded_data, np.uint8)
     # img = cv2.imdecode(np_data, cv2.IMREAD_UNCHANGED)
