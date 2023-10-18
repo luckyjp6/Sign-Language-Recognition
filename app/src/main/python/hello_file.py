@@ -18,7 +18,10 @@ def hello_func(data):
 
     # print("I AM PYTHON!!!!!!!!!!!!!!!!!!!")
     image = cv2.imdecode(np.asarray(data), cv2.IMREAD_COLOR)
-    _, im_buf_arr = cv2.imencode(".png", image)
+    rotate = cv2.rotate(image, cv2.ROTATE_180)
+    _, im_buf_arr = cv2.imencode(".jpeg", rotate)
+
+
     byte_im = im_buf_arr.tobytes()
 
     return byte_im

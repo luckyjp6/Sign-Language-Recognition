@@ -6,15 +6,19 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
+import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Camera;
 import android.graphics.ImageFormat;
+import android.graphics.Picture;
 import android.graphics.SurfaceTexture;
 import android.graphics.drawable.BitmapDrawable;
 import android.hardware.camera2.CameraAccessException;
+import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CaptureRequest;
@@ -24,6 +28,7 @@ import android.hardware.camera2.params.OutputConfiguration;
 import android.hardware.camera2.params.SessionConfiguration;
 import android.media.Image;
 import android.media.ImageReader;
+import android.net.wifi.aware.Characteristics;
 import android.os.Bundle;
 import android.util.Base64;
 import android.util.Log;
@@ -37,7 +42,11 @@ import com.chaquo.python.android.AndroidPlatform;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
+import java.util.Vector;
+
 import com.chaquo.python.PyObject;
 
 
@@ -47,7 +56,8 @@ import android.widget.TextView;
 
 public class MainActivity extends AppCompatActivity {
 
-    private TextureView textureView;
+//    private TextureView textureView;
+    private ImageView pictureView;
     private CameraCaptureSession cameraCaptureSession;
     private CameraCaptureSession cameraCaptureSession_imageReader;
     private String stringCameraID;
@@ -80,7 +90,7 @@ public class MainActivity extends AppCompatActivity {
                 PackageManager.PERMISSION_GRANTED);
 
 //        access the texture for camera
-        textureView = findViewById(R.id.textureView);
+        pictureView = findViewById(R.id.picture);
 
 //        set camera manager
         cameraManager = (CameraManager) getSystemService(CAMERA_SERVICE);
@@ -93,8 +103,8 @@ public class MainActivity extends AppCompatActivity {
 
 //        prepare imageReader
         imageReader = ImageReader.newInstance(
-                textureView.getLayoutParams().width,
-                textureView.getLayoutParams().height,
+                pictureView.getLayoutParams().width,
+                pictureView.getLayoutParams().height,
                 ImageFormat.JPEG,2
         );
         imageReader.setOnImageAvailableListener(new ImageReader.OnImageAvailableListener() {
@@ -114,6 +124,7 @@ public class MainActivity extends AppCompatActivity {
                 image.close();
                 PyObject aiModule = py.getModule("hello_file");
                 byte[] result = aiModule.callAttr("hello_func", bytes).toJava(byte[].class);
+
 //                String result = aiModule.callAttr("hello_func", bytes).toJava(String.class);
 //                TextView txt = findViewById(R.id.textView);
 //                txt.setText(result);
@@ -125,28 +136,28 @@ public class MainActivity extends AppCompatActivity {
         }, null);
 
 //      prepare texture listener
-        surfaceTextureListener = new TextureView.SurfaceTextureListener() {
-            @Override
-            public void onSurfaceTextureAvailable(@NonNull SurfaceTexture surface, int width, int height) {
-//                startCamera();
-            }
-
-            @Override
-            public void onSurfaceTextureSizeChanged(@NonNull SurfaceTexture surface, int width, int height) {
-
-            }
-
-            @Override
-            public boolean onSurfaceTextureDestroyed(@NonNull SurfaceTexture surface) {
-                return false;
-            }
-
-            @Override
-            public void onSurfaceTextureUpdated(@NonNull SurfaceTexture surface) {
-
-            }
-        };
-        textureView.setSurfaceTextureListener(surfaceTextureListener);
+//        surfaceTextureListener = new TextureView.SurfaceTextureListener() {
+//            @Override
+//            public void onSurfaceTextureAvailable(@NonNull SurfaceTexture surface, int width, int height) {
+////                startCamera();
+//            }
+//
+//            @Override
+//            public void onSurfaceTextureSizeChanged(@NonNull SurfaceTexture surface, int width, int height) {
+//
+//            }
+//
+//            @Override
+//            public boolean onSurfaceTextureDestroyed(@NonNull SurfaceTexture surface) {
+//                return false;
+//            }
+//
+//            @Override
+//            public void onSurfaceTextureUpdated(@NonNull SurfaceTexture surface) {
+//
+//            }
+//        };
+//        textureView.setSurfaceTextureListener(surfaceTextureListener);
 
         startCamera();
     }
@@ -170,9 +181,28 @@ public class MainActivity extends AppCompatActivity {
     };
 
 
+    private int getJpegOrientation(CameraCharacteristics c, int deviceOrientation) {
+        if (deviceOrientation == android.view.OrientationEventListener.ORIENTATION_UNKNOWN) return 0;
+        int sensorOrientation = c.get(CameraCharacteristics.SENSOR_ORIENTATION);
+
+        // Round device orientation to a multiple of 90
+        deviceOrientation = (deviceOrientation + 45) / 90 * 90;
+
+        // Reverse device orientation for front-facing cameras
+        boolean facingFront = c.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT;
+        if (facingFront) deviceOrientation = -deviceOrientation;
+
+        // Calculate desired JPEG orientation relative to camera orientation to make
+        // the image upright relative to the device orientation
+        int jpegOrientation = (sensorOrientation + deviceOrientation + 360) % 360;
+
+        return jpegOrientation;
+    }
+
     private void startCamera() {
         try {
             stringCameraID = cameraManager.getCameraIdList()[1];
+            ImageView displayPicture = findViewById(R.id.picture);
 
             if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
                 ActivityCompat.requestPermissions(this, new String[]{CAMERA}, 1);
@@ -189,54 +219,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void buttonStartCamera(View view) throws CameraAccessException {
-        SurfaceTexture surfaceTexture = textureView.getSurfaceTexture();
-        Surface surface = new Surface(surfaceTexture);
-
-        try {
-            captureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-            captureRequestBuilder.addTarget(surface);
-
-            OutputConfiguration outputConfiguration = new OutputConfiguration(surface);
-            SessionConfiguration sessionConfiguration = new SessionConfiguration(SessionConfiguration.SESSION_REGULAR,
-                    Collections.singletonList(outputConfiguration),
-                    getMainExecutor(),
-                    new CameraCaptureSession.StateCallback() {
-                        @Override
-                        public void onConfigured(@NonNull CameraCaptureSession session) {
-                            cameraCaptureSession = session;
-                            captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE,
-                                    CameraMetadata.CONTROL_MODE_AUTO);
-
-                            try {
-                                cameraCaptureSession.setRepeatingRequest(captureRequestBuilder.build(), null, null);
-                            } catch (CameraAccessException e) {
-                               e.printStackTrace();
-                            }
-                        }
-                        @Override
-                        public void onConfigureFailed(@NonNull CameraCaptureSession session) {
-                            cameraCaptureSession = null;
-                        }
-                    }
-            );
-
-            cameraDevice.createCaptureSession(sessionConfiguration);
-        } catch (CameraAccessException e) {
-            throw new RuntimeException(e);
-        }
-    }
-    public void buttonStopCamera(View view) {
-        try {
-            if (cameraCaptureSession != null) cameraCaptureSession.abortCaptures();
-        } catch (Exception e) {
-//            e.printStackTrace();
-        }
-        if (cameraCaptureSession != null) cameraCaptureSession.close();
-//        if (cameraDevice != null) cameraDevice.close(); // this will shut down the app, don't use it
-    }
-
-    public void capture_image(View view) throws CameraAccessException {
-
         try {
             captureRequestBuilder_imgReader = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
         } catch (CameraAccessException e) {
@@ -253,7 +235,17 @@ public class MainActivity extends AppCompatActivity {
                     public void onConfigured(@NonNull CameraCaptureSession session) {
                         if (session == null) return;
                         cameraCaptureSession_imageReader = session;
-                        captureRequestBuilder_imgReader.set(CaptureRequest.JPEG_ORIENTATION, 90);
+                        try {
+                            CameraCharacteristics characteristics = cameraManager.getCameraCharacteristics(cameraManager.getCameraIdList()[1]);
+
+//                            Activity activity= getActivity();
+                            captureRequestBuilder_imgReader.set(
+                                    CaptureRequest.JPEG_ORIENTATION,
+                                    getJpegOrientation(characteristics, 180)
+                            );
+                        } catch (CameraAccessException e) {
+                            throw new RuntimeException(e);
+                        }
                         captureRequestBuilder_imgReader.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_START);
 
                         try {
@@ -261,6 +253,7 @@ public class MainActivity extends AppCompatActivity {
                         } catch (CameraAccessException e) {
                             e.printStackTrace();
                         }
+//                        unlockFocus();
                     }
 
                     @Override
@@ -270,7 +263,99 @@ public class MainActivity extends AppCompatActivity {
                 }
         );
         cameraDevice.createCaptureSession(sessionConfiguration);
+////        SurfaceTexture surfaceTexture = textureView.getSurfaceTexture();
+////        Surface surface = new Surface(surfaceTexture);
+//        Surface imageSurface = imageReader.getSurface();
+//
+//        try {
+//            captureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+////            captureRequestBuilder.addTarget(surface);
+//            captureRequestBuilder.addTarget(imageSurface);
+//
+////            OutputConfiguration outputConfiguration = new OutputConfiguration(surface);
+//            OutputConfiguration outputConfiguration_image = new OutputConfiguration(imageSurface);
+//            Vector<OutputConfiguration> outputVec = new Vector<OutputConfiguration>();
+////            outputVec.add(outputConfiguration);
+//            outputVec.add(outputConfiguration_image);
+//
+//            SessionConfiguration sessionConfiguration = new SessionConfiguration(SessionConfiguration.SESSION_REGULAR,
+//                    Collections.list(outputVec.elements()),
+////                    Collections.singletonList(outputConfiguration),
+//                    getMainExecutor(),
+//                    new CameraCaptureSession.StateCallback() {
+//                        @Override
+//                        public void onConfigured(@NonNull CameraCaptureSession session) {
+//                            cameraCaptureSession = session;
+//                            captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE,
+//                                    CameraMetadata.CONTROL_MODE_AUTO);
+//
+//                            try {
+//                                cameraCaptureSession.setRepeatingRequest(captureRequestBuilder.build(), null, null);
+//                            } catch (CameraAccessException e) {
+//                               e.printStackTrace();
+//                            }
+//                        }
+//                        @Override
+//                        public void onConfigureFailed(@NonNull CameraCaptureSession session) {
+//                            cameraCaptureSession = null;
+//                        }
+//                    }
+//            );
+//
+//            cameraDevice.createCaptureSession(sessionConfiguration);
+//        } catch (CameraAccessException e) {
+//            throw new RuntimeException(e);
+//        }
     }
+    public void buttonStopCamera(View view) {
+        try {
+            if (cameraCaptureSession_imageReader != null) cameraCaptureSession_imageReader.abortCaptures();
+        } catch (Exception e) {
+//            e.printStackTrace();
+        }
+        if (cameraCaptureSession != null) cameraCaptureSession.close();
+//        if (cameraDevice != null) cameraDevice.close(); // this will shut down the app, don't use it
+    }
+
+    public void capture_image(View view) throws CameraAccessException {
+
+//        try {
+//            captureRequestBuilder_imgReader = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
+//        } catch (CameraAccessException e) {
+//            e.printStackTrace();
+//        }
+//        captureRequestBuilder_imgReader.addTarget(imageReader.getSurface());
+//
+//        OutputConfiguration outputConfiguration = new OutputConfiguration(imageReader.getSurface());
+//        SessionConfiguration sessionConfiguration = new SessionConfiguration(SessionConfiguration.SESSION_REGULAR,
+//                Collections.singletonList(outputConfiguration),
+//                getMainExecutor(),
+//                new CameraCaptureSession.StateCallback() {
+//                    @Override
+//                    public void onConfigured(@NonNull CameraCaptureSession session) {
+//                        if (session == null) return;
+//                        cameraCaptureSession_imageReader = session;
+//                        captureRequestBuilder_imgReader.set(CaptureRequest.JPEG_ORIENTATION, 90);
+//                        captureRequestBuilder_imgReader.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_START);
+//
+//                        try {
+//                            cameraCaptureSession_imageReader.setRepeatingRequest(captureRequestBuilder_imgReader.build(), null, null);
+//                        } catch (CameraAccessException e) {
+//                            e.printStackTrace();
+//                        }
+////                        unlockFocus();
+//                    }
+//
+//                    @Override
+//                    public void onConfigureFailed(@NonNull CameraCaptureSession session) {
+//                        cameraCaptureSession_imageReader = null;
+//                    }
+//                }
+//        );
+//        cameraDevice.createCaptureSession(sessionConfiguration);
+    }
+
+
 //    private String getStringImage(Bitmap bitmap) {
 //        ByteArrayOutputStream bOutStream = new ByteArrayOutputStream();
 //        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, bOutStream);
