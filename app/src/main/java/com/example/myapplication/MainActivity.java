@@ -69,6 +69,8 @@ public class MainActivity extends AppCompatActivity {
     private TextureView.SurfaceTextureListener surfaceTextureListener;
     private static ParcelFileDescriptor[] img_pipe, text_pipe;
     private Python py;
+    private Boolean mode_flag;
+    private String curret_text;
 
 //    static {
 //        try {
@@ -136,8 +138,15 @@ public class MainActivity extends AppCompatActivity {
 //                txt.setText(result);
 
                 String model_return;
+                // Sign language mode
+                if(mode_flag == Boolean.TRUE){
+                    model_return = "@";
+                }
+                // function mode
+                else{
+                    model_return = "$";
+                }
 
-                model_return = "%";
                 return_text_processing(model_return);
             }
         }, null);
@@ -169,35 +178,38 @@ public class MainActivity extends AppCompatActivity {
         startCamera();
     }
 
-    private void return_text_processing(String text){
-        if(text == "@"){ // stop
-            TextView display_text = findViewById(R.id.display_text);
-            display_text.setText("stop");
+    private void return_text_processing(String new_text){
+
+        if(new_text == "@"){ // stop
+            // TODO: goes into chatGPT
+            String gpt_return;
+            gpt_return = "This is a full sentence.";
+
+            curret_text = gpt_return;
+            // switch mode to function mode
+            mode_flag = Boolean.FALSE;
         }
-        else if(text == "#"){ // enter
-            TextView display_text = findViewById(R.id.display_text);
-            display_text.setText("enter");
+        else if(new_text == "#"){ // enter
+            curret_text = null;
         }
-        else if(text == "$"){ // restart
-            TextView display_text = findViewById(R.id.display_text);
-            display_text.setText("restart");
+        else if(new_text == "$"){ // restart
+            // switch mode to Sign mode
+            mode_flag = Boolean.TRUE;
         }
-        else if(text == "%"){ // delete
-            TextView display_text = findViewById(R.id.display_text);
-            display_text.setText("delete");
+        else if(new_text == "%"){ // delete
+            curret_text = null;
         }
-        else if(text == "^"){ // exit
-            TextView display_text = findViewById(R.id.display_text);
-            display_text.setText("exit");
+        else if(new_text == "^"){ // exit
+            curret_text = null;
         }
-        else if(text == "&"){ // empty value
-            TextView display_text = findViewById(R.id.display_text);
-            display_text.setText("");
+        else if(new_text == "&"){ // empty value
+
         }
         else{ // regular text
-            TextView display_text = findViewById(R.id.display_text);
-            display_text.setText(text);
+            curret_text = (curret_text != null) ? curret_text + new_text : new_text;
         }
+        TextView display_text = findViewById(R.id.display_text);
+        display_text.setText(curret_text);
 
     }
 
