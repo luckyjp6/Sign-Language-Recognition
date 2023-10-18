@@ -21,7 +21,7 @@ android {
             abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
         }
         python {
-            buildPython "C:/Users/warm/AppData/Local/Programs/Python/Python311/python.exe"
+            buildPython "/usr/local/bin/python3.9"
             pyc{
                 src false
             }

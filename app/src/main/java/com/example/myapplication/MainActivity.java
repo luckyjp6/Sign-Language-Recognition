@@ -134,6 +134,11 @@ public class MainActivity extends AppCompatActivity {
 //                String result = aiModule.callAttr("hello_func", bytes).toJava(String.class);
 //                TextView txt = findViewById(R.id.textView);
 //                txt.setText(result);
+
+                String model_return;
+
+                model_return = "%";
+                return_text_processing(model_return);
             }
         }, null);
 
@@ -162,6 +167,38 @@ public class MainActivity extends AppCompatActivity {
 //        textureView.setSurfaceTextureListener(surfaceTextureListener);
 
         startCamera();
+    }
+
+    private void return_text_processing(String text){
+        if(text == "@"){ // stop
+            TextView display_text = findViewById(R.id.display_text);
+            display_text.setText("stop");
+        }
+        else if(text == "#"){ // enter
+            TextView display_text = findViewById(R.id.display_text);
+            display_text.setText("enter");
+        }
+        else if(text == "$"){ // restart
+            TextView display_text = findViewById(R.id.display_text);
+            display_text.setText("restart");
+        }
+        else if(text == "%"){ // delete
+            TextView display_text = findViewById(R.id.display_text);
+            display_text.setText("delete");
+        }
+        else if(text == "^"){ // exit
+            TextView display_text = findViewById(R.id.display_text);
+            display_text.setText("exit");
+        }
+        else if(text == "&"){ // empty value
+            TextView display_text = findViewById(R.id.display_text);
+            display_text.setText("");
+        }
+        else{ // regular text
+            TextView display_text = findViewById(R.id.display_text);
+            display_text.setText(text);
+        }
+
     }
 
     private CameraDevice.StateCallback stateCallback = new CameraDevice.StateCallback() {
