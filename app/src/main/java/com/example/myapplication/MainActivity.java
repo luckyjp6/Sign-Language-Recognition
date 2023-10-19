@@ -69,7 +69,7 @@ public class MainActivity extends AppCompatActivity {
     private TextureView.SurfaceTextureListener surfaceTextureListener;
     private static ParcelFileDescriptor[] img_pipe, text_pipe;
     private Python py;
-    private Boolean mode_flag;
+    private Boolean is_sign_mode;
     private String curret_text;
 
 //    static {
@@ -138,12 +138,12 @@ public class MainActivity extends AppCompatActivity {
 //                txt.setText(result);
 
                 String model_return;
-                // Sign language mode
-                if(mode_flag == Boolean.TRUE){
-                    model_return = "@";
+                if(is_sign_mode == Boolean.TRUE){
+                    // TODO: 接Sign mode model
+                    model_return = "@This is a sentence reconstructed by GPT";
                 }
-                // function mode
                 else{
+                    // TODO: 接command mode model
                     model_return = "$";
                 }
 
@@ -180,21 +180,17 @@ public class MainActivity extends AppCompatActivity {
 
     private void return_text_processing(String new_text){
 
-        if(new_text == "@"){ // stop
-            // TODO: goes into chatGPT
-            String gpt_return;
-            gpt_return = "This is a full sentence.";
-
-            curret_text = gpt_return;
-            // switch mode to function mode
-            mode_flag = Boolean.FALSE;
+        if (new_text.charAt(0) == '@') { // Check if the first character is "@"
+            curret_text = new_text;
+            // Switch mode to function mode
+            is_sign_mode = Boolean.FALSE;
         }
         else if(new_text == "#"){ // enter
             curret_text = null;
         }
         else if(new_text == "$"){ // restart
             // switch mode to Sign mode
-            mode_flag = Boolean.TRUE;
+            is_sign_mode = Boolean.TRUE;
         }
         else if(new_text == "%"){ // delete
             curret_text = null;
