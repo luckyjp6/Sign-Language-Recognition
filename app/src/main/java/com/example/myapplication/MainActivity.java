@@ -5,18 +5,14 @@ import static android.Manifest.permission.CAMERA;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+import androidx.lifecycle.ViewModel;
 
-import android.app.Activity;
-import android.content.Intent;
+import android.content.Context;
 import android.content.pm.PackageManager;
-import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Camera;
+import android.graphics.Color;
 import android.graphics.ImageFormat;
-import android.graphics.Picture;
-import android.graphics.SurfaceTexture;
-import android.graphics.drawable.BitmapDrawable;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraManager;
@@ -28,30 +24,28 @@ import android.hardware.camera2.params.OutputConfiguration;
 import android.hardware.camera2.params.SessionConfiguration;
 import android.media.Image;
 import android.media.ImageReader;
-import android.net.wifi.aware.Characteristics;
 import android.os.Bundle;
-import android.util.Base64;
-import android.util.Log;
+import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.TextureView;
 import android.view.View;
-import android.view.Surface;
 
 import com.chaquo.python.Python;
 import com.chaquo.python.android.AndroidPlatform;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
-import java.util.Vector;
+import java.util.Random;
 
 import com.chaquo.python.PyObject;
 
 
 import android.os.ParcelFileDescriptor;
+import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 public class MainActivity extends AppCompatActivity {
@@ -150,23 +144,79 @@ public class MainActivity extends AppCompatActivity {
         String model_return;
         if (is_sign_mode == Boolean.TRUE) {
             // TODO: 接Sign mode model
-            model_return = "A";
+            Random random = new Random();
+
+// Generate a random number between 0 and 2 (inclusive)
+            int randomValue = random.nextInt(3);
+
+            switch (randomValue) {
+                case 0:
+                    model_return = "Hello";
+                    break;
+                case 1:
+                    model_return = "#";
+                    break;
+                case 2:
+                    model_return = "@my name is Emerald";
+                    break;
+                default:
+                    model_return = "@Hi"; // Default value in case of unexpected randomValue
+            }
         } else {
             // TODO: 接command mode model
-            model_return = "$";
+            Random random = new Random();
+
+// Generate a random number between 0 and 2 (inclusive)
+            int randomValue = random.nextInt(3);
+
+            switch (randomValue) {
+                case 0:
+                    model_return = "Hello";
+                    break;
+                case 1:
+                    model_return = "#";
+                    break;
+                case 2:
+                    model_return = "@my name is Emerald";
+                    break;
+                default:
+                    model_return = "@Hi";
+            }
         }
 
         return_text_processing(model_return);
     }
 
-    private void return_text_processing(String new_text){
-        if (new_text.charAt(0) == '@') { // Check if the first character is "@"
-            current_text = (current_text != null) ? current_text + new_text : new_text;
+    public class textData extends ViewModel {
+        public  textData(){
+            responseSet = new ArrayList<>(Arrays.asList("要不要一起去吃飯?","要不要找更多人?"));
         }
-        else if(new_text == "#"){ // enter
-            current_text = null;
+        private int resIndex = 0;
+        private ArrayList<String> responseSet;
+        public String getResponse(){
+            if(resIndex<responseSet.size()){
+                return responseSet.get(resIndex++);
+            }
+            else return "";
+        }
+
+    }
+
+    private void return_text_processing(String new_text){
+        if (new_text.length() > 0 && new_text.charAt(0) == '@') {
+            // Check if the string is not empty and the first character is "@"
+            new_text = new_text.substring(1); // Remove the first character
+            current_text = (current_text != null) ? current_text + " " + new_text : new_text;
+
             // Switch mode to function mode
             is_sign_mode = Boolean.FALSE;
+        }
+        else if(new_text == "#"){ // enter
+            if (current_text != null) {
+                LinearLayout linearLayout = findViewById(R.id.convo);
+                addStyledTextViewToLayout(linearLayout, current_text, true);
+                current_text = null;
+            }
         }
         else if(new_text == "$"){ // restart
             // switch mode to Sign mode
@@ -178,6 +228,7 @@ public class MainActivity extends AppCompatActivity {
         }
         else if(new_text == "^"){ // exit
             current_text = null;
+            // TODO: some function to close the camera texture
         }
         else if(new_text == "&"){ // empty value
 
@@ -189,6 +240,52 @@ public class MainActivity extends AppCompatActivity {
         display_text.setText(current_text);
 
     }
+
+    private void addStyledTextViewToLayout(LinearLayout layout, String text, boolean is_my_text) {
+        // Create and configure a new TextView
+        TextView styledTextView = createStyledTextView(this, text, is_my_text);
+
+        View spacer = new View(this);
+        spacer.setLayoutParams(new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dpToPx(10) // Convert dp to pixels (10dp)
+        ));
+
+        layout.addView(styledTextView);
+        layout.addView(spacer);
+    }
+
+
+    // Function to convert dp to pixels
+    public int dpToPx(int dp) {
+        float density = getResources().getDisplayMetrics().density;
+        return Math.round(dp * density);
+    }
+
+    private TextView createStyledTextView(Context context, String text, Boolean is_my_text) {
+        int gravity = Gravity.START, backgroundResourceID = R.drawable.your_input_bg;
+        String text_color = "#4285F4";
+        if(is_my_text == Boolean.TRUE){
+            gravity = Gravity.END;
+            backgroundResourceID = R.drawable.my_input_bg;
+            text_color = "#FAF9F6";
+        }
+        TextView textView = new TextView(context);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        params.gravity = gravity;
+
+        textView.setLayoutParams(params);
+        textView.setBackgroundResource(backgroundResourceID);
+        textView.setPadding(16, 8, 16, 8);
+        textView.setText(text);
+        textView.setTextColor(Color.parseColor("#FFFFFF"));
+        textView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+
+        return textView;
+    }
+
 
     private CameraDevice.StateCallback stateCallback = new CameraDevice.StateCallback() {
         @Override
