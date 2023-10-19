@@ -69,6 +69,8 @@ public class MainActivity extends AppCompatActivity {
     private TextureView.SurfaceTextureListener surfaceTextureListener;
     private static ParcelFileDescriptor[] img_pipe, text_pipe;
     private Python py;
+    private int frame_count = 0;
+    byte [][]frames;
 
 //    static {
 //        try {
@@ -95,6 +97,10 @@ public class MainActivity extends AppCompatActivity {
 //        set camera manager
         cameraManager = (CameraManager) getSystemService(CAMERA_SERVICE);
 
+//        Log.d("width",  String.format("value = %d", pictureView.getLayoutParams().width));
+//        Log.d("height", String.format("value = %d", pictureView.getLayoutParams().height));
+        frames = new byte[20][];
+
 //        start Python
         if (!Python.isStarted()) {
             Python.start(new AndroidPlatform(this));
@@ -116,16 +122,23 @@ public class MainActivity extends AppCompatActivity {
                 ByteBuffer buffer= image.getPlanes()[0].getBuffer();
                 int length= buffer.remaining();
                 byte[] bytes= new byte[length];
-                buffer.get(bytes);
+
+                frames[frame_count] = new byte[length];
+                buffer.get(frames[frame_count]);
+
                 image.close();
 
-//                Rotate image and show the preview
-//                PyObject rotateModule = py.getModule("Rotation");
-//                byte[] rotationResult = rotateModule.callAttr("rotation_func", bytes).toJava(byte[].class);
-
-                Bitmap bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+                Bitmap bmp = BitmapFactory.decodeByteArray(frames[frame_count], 0, length);
                 ImageView displayPicture = findViewById(R.id.picture);
                 displayPicture.setImageBitmap(bmp);
+
+                frame_count++;
+//                Send frames to AI module when 20 frames are collected
+                if (frame_count == 1) {
+                    frame_count = 0;
+//                Rotate image and show the preview
+                    PyObject rotateModule = py.getModule("Rotation");
+                    rotateModule.callAttr("rotation_func", frames);
 
 //                TODO: Add AI entry point here!!
 //                PyObject aiModule = py.getModule("AI_file");
@@ -134,6 +147,9 @@ public class MainActivity extends AppCompatActivity {
 //                String result = aiModule.callAttr("hello_func", bytes).toJava(String.class);
 //                TextView txt = findViewById(R.id.textView);
 //                txt.setText(result);
+                }
+
+
             }
         }, null);
 
