@@ -69,99 +69,125 @@ public class MainActivity extends AppCompatActivity {
     private TextureView.SurfaceTextureListener surfaceTextureListener;
     private static ParcelFileDescriptor[] img_pipe, text_pipe;
     private Python py;
-
-//    static {
-//        try {
-//            img_pipe = ParcelFileDescriptor.createPipe();
-//            text_pipe = ParcelFileDescriptor.createPipe();
-//        } catch (IOException e) {
-//            throw new RuntimeException(e);
-//        }
-//    }
+    private Boolean is_sign_mode;
+    private String current_text;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-//        Request camera permission
+        // Start Python
+        initPython();
+
+        // Request camera permission
         ActivityCompat.requestPermissions(this,
                 new String[]{CAMERA},
                 PackageManager.PERMISSION_GRANTED);
 
-//        access the texture for camera
+        // Initialize texture for camera
         pictureView = findViewById(R.id.picture);
 
-//        set camera manager
-        cameraManager = (CameraManager) getSystemService(CAMERA_SERVICE);
+        // Init imageReader, start image listener
+        initImageReader();
+        setupImageReaderListener();
 
-//        start Python
+        // Set camera manager
+        cameraManager = (CameraManager) getSystemService(CAMERA_SERVICE);
+        startCamera();
+    }
+
+    private void initPython() {
         if (!Python.isStarted()) {
             Python.start(new AndroidPlatform(this));
         }
         py = Python.getInstance();
+    }
 
-//        prepare imageReader
+    private void initImageReader() {
         imageReader = ImageReader.newInstance(
                 pictureView.getLayoutParams().width,
                 pictureView.getLayoutParams().height,
-                ImageFormat.JPEG,2
+                ImageFormat.JPEG, 2
         );
+    }
+
+    private void setupImageReaderListener() {
         imageReader.setOnImageAvailableListener(new ImageReader.OnImageAvailableListener() {
             @Override
             public void onImageAvailable(ImageReader reader) {
-                if (cameraCaptureSession_imageReader == null) return;
-                Image image = reader.acquireLatestImage();
-                if (image == null) return;
-                ByteBuffer buffer= image.getPlanes()[0].getBuffer();
-                int length= buffer.remaining();
-                byte[] bytes= new byte[length];
-                buffer.get(bytes);
-                image.close();
-
-//                Rotate image and show the preview
-                PyObject rotateModule = py.getModule("Rotation");
-                byte[] rotationResult = rotateModule.callAttr("rotation_func", bytes).toJava(byte[].class);
-
-                Bitmap bmp = BitmapFactory.decodeByteArray(rotationResult, 0, rotationResult.length);
-                ImageView displayPicture = findViewById(R.id.picture);
-                displayPicture.setImageBitmap(bmp);
-
-//                TODO: Add AI entry point here!!
-//                PyObject aiModule = py.getModule("AI_file");
-//                String aiResult = aiModule.callAttr("func_name", rotationResult).toJava(String.class);
-
-//                String result = aiModule.callAttr("hello_func", bytes).toJava(String.class);
-//                TextView txt = findViewById(R.id.textView);
-//                txt.setText(result);
+                processCapturedImage(reader);
             }
         }, null);
+    }
 
-//      prepare texture listener
-//        surfaceTextureListener = new TextureView.SurfaceTextureListener() {
-//            @Override
-//            public void onSurfaceTextureAvailable(@NonNull SurfaceTexture surface, int width, int height) {
-////                startCamera();
-//            }
-//
-//            @Override
-//            public void onSurfaceTextureSizeChanged(@NonNull SurfaceTexture surface, int width, int height) {
-//
-//            }
-//
-//            @Override
-//            public boolean onSurfaceTextureDestroyed(@NonNull SurfaceTexture surface) {
-//                return false;
-//            }
-//
-//            @Override
-//            public void onSurfaceTextureUpdated(@NonNull SurfaceTexture surface) {
-//
-//            }
-//        };
-//        textureView.setSurfaceTextureListener(surfaceTextureListener);
+    private void processCapturedImage(ImageReader reader) {
+        if (cameraCaptureSession_imageReader == null) return;
+        Image image = reader.acquireLatestImage();
+        if (image == null) return;
+        ByteBuffer buffer = image.getPlanes()[0].getBuffer();
+        int length = buffer.remaining();
+        byte[] bytes = new byte[length];
+        buffer.get(bytes);
+        image.close();
 
-        startCamera();
+        // Rotate image and show the preview
+        PyObject rotateModule = py.getModule("Rotation");
+        byte[] rotationResult = rotateModule.callAttr("rotation_func", bytes).toJava(byte[].class);
+
+        Bitmap bmp = BitmapFactory.decodeByteArray(rotationResult, 0, rotationResult.length);
+        ImageView displayPicture = findViewById(R.id.picture);
+        displayPicture.setImageBitmap(bmp);
+
+        // TODO: Add AI entry point here!!
+        // PyObject aiModule = py.getModule("AI_file");
+        // String aiResult = aiModule.callAttr("func_name", rotationResult).toJava(String.class);
+
+        // String result = aiModule.callAttr("hello_func", bytes).toJava(String.class);
+        // TextView txt = findViewById(R.id.textView);
+        // txt.setText(result);
+
+        String model_return;
+        if (is_sign_mode == Boolean.TRUE) {
+            // TODO: 接Sign mode model
+            model_return = "A";
+        } else {
+            // TODO: 接command mode model
+            model_return = "$";
+        }
+
+        return_text_processing(model_return);
+    }
+
+    private void return_text_processing(String new_text){
+        if (new_text.charAt(0) == '@') { // Check if the first character is "@"
+            current_text = (current_text != null) ? current_text + new_text : new_text;
+        }
+        else if(new_text == "#"){ // enter
+            current_text = null;
+            // Switch mode to function mode
+            is_sign_mode = Boolean.FALSE;
+        }
+        else if(new_text == "$"){ // restart
+            // switch mode to Sign mode
+            current_text = null;
+            is_sign_mode = Boolean.TRUE;
+        }
+        else if(new_text == "%"){ // delete
+            current_text = null;
+        }
+        else if(new_text == "^"){ // exit
+            current_text = null;
+        }
+        else if(new_text == "&"){ // empty value
+
+        }
+        else{ // regular text
+            current_text = (current_text != null) ? current_text + new_text : new_text;
+        }
+        TextView display_text = findViewById(R.id.display_text);
+        display_text.setText(current_text);
+
     }
 
     private CameraDevice.StateCallback stateCallback = new CameraDevice.StateCallback() {
@@ -181,25 +207,6 @@ public class MainActivity extends AppCompatActivity {
             cameraDevice = null;
         }
     };
-
-
-    private int getJpegOrientation(CameraCharacteristics c, int deviceOrientation) {
-        if (deviceOrientation == android.view.OrientationEventListener.ORIENTATION_UNKNOWN) return 0;
-        int sensorOrientation = c.get(CameraCharacteristics.SENSOR_ORIENTATION);
-
-        // Round device orientation to a multiple of 90
-        deviceOrientation = (deviceOrientation + 45) / 90 * 90;
-
-        // Reverse device orientation for front-facing cameras
-        boolean facingFront = c.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT;
-        if (facingFront) deviceOrientation = -deviceOrientation;
-
-        // Calculate desired JPEG orientation relative to camera orientation to make
-        // the image upright relative to the device orientation
-        int jpegOrientation = (sensorOrientation + deviceOrientation + 360) % 360;
-
-        return jpegOrientation;
-    }
 
     private void startCamera() {
         try {
@@ -265,50 +272,26 @@ public class MainActivity extends AppCompatActivity {
                 }
         );
         cameraDevice.createCaptureSession(sessionConfiguration);
-////        SurfaceTexture surfaceTexture = textureView.getSurfaceTexture();
-////        Surface surface = new Surface(surfaceTexture);
-//        Surface imageSurface = imageReader.getSurface();
-//
-//        try {
-//            captureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-////            captureRequestBuilder.addTarget(surface);
-//            captureRequestBuilder.addTarget(imageSurface);
-//
-////            OutputConfiguration outputConfiguration = new OutputConfiguration(surface);
-//            OutputConfiguration outputConfiguration_image = new OutputConfiguration(imageSurface);
-//            Vector<OutputConfiguration> outputVec = new Vector<OutputConfiguration>();
-////            outputVec.add(outputConfiguration);
-//            outputVec.add(outputConfiguration_image);
-//
-//            SessionConfiguration sessionConfiguration = new SessionConfiguration(SessionConfiguration.SESSION_REGULAR,
-//                    Collections.list(outputVec.elements()),
-////                    Collections.singletonList(outputConfiguration),
-//                    getMainExecutor(),
-//                    new CameraCaptureSession.StateCallback() {
-//                        @Override
-//                        public void onConfigured(@NonNull CameraCaptureSession session) {
-//                            cameraCaptureSession = session;
-//                            captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE,
-//                                    CameraMetadata.CONTROL_MODE_AUTO);
-//
-//                            try {
-//                                cameraCaptureSession.setRepeatingRequest(captureRequestBuilder.build(), null, null);
-//                            } catch (CameraAccessException e) {
-//                               e.printStackTrace();
-//                            }
-//                        }
-//                        @Override
-//                        public void onConfigureFailed(@NonNull CameraCaptureSession session) {
-//                            cameraCaptureSession = null;
-//                        }
-//                    }
-//            );
-//
-//            cameraDevice.createCaptureSession(sessionConfiguration);
-//        } catch (CameraAccessException e) {
-//            throw new RuntimeException(e);
-//        }
     }
+
+    private int getJpegOrientation(CameraCharacteristics c, int deviceOrientation) {
+        if (deviceOrientation == android.view.OrientationEventListener.ORIENTATION_UNKNOWN) return 0;
+        int sensorOrientation = c.get(CameraCharacteristics.SENSOR_ORIENTATION);
+
+        // Round device orientation to a multiple of 90
+        deviceOrientation = (deviceOrientation + 45) / 90 * 90;
+
+        // Reverse device orientation for front-facing cameras
+        boolean facingFront = c.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT;
+        if (facingFront) deviceOrientation = -deviceOrientation;
+
+        // Calculate desired JPEG orientation relative to camera orientation to make
+        // the image upright relative to the device orientation
+        int jpegOrientation = (sensorOrientation + deviceOrientation + 360) % 360;
+
+        return jpegOrientation;
+    }
+
     public void buttonStopCamera(View view) {
         try {
             if (cameraCaptureSession_imageReader != null) cameraCaptureSession_imageReader.abortCaptures();
@@ -319,53 +302,4 @@ public class MainActivity extends AppCompatActivity {
 //        if (cameraDevice != null) cameraDevice.close(); // this will shut down the app, don't use it
     }
 
-    public void capture_image(View view) throws CameraAccessException {
-
-//        try {
-//            captureRequestBuilder_imgReader = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
-//        } catch (CameraAccessException e) {
-//            e.printStackTrace();
-//        }
-//        captureRequestBuilder_imgReader.addTarget(imageReader.getSurface());
-//
-//        OutputConfiguration outputConfiguration = new OutputConfiguration(imageReader.getSurface());
-//        SessionConfiguration sessionConfiguration = new SessionConfiguration(SessionConfiguration.SESSION_REGULAR,
-//                Collections.singletonList(outputConfiguration),
-//                getMainExecutor(),
-//                new CameraCaptureSession.StateCallback() {
-//                    @Override
-//                    public void onConfigured(@NonNull CameraCaptureSession session) {
-//                        if (session == null) return;
-//                        cameraCaptureSession_imageReader = session;
-//                        captureRequestBuilder_imgReader.set(CaptureRequest.JPEG_ORIENTATION, 90);
-//                        captureRequestBuilder_imgReader.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_START);
-//
-//                        try {
-//                            cameraCaptureSession_imageReader.setRepeatingRequest(captureRequestBuilder_imgReader.build(), null, null);
-//                        } catch (CameraAccessException e) {
-//                            e.printStackTrace();
-//                        }
-////                        unlockFocus();
-//                    }
-//
-//                    @Override
-//                    public void onConfigureFailed(@NonNull CameraCaptureSession session) {
-//                        cameraCaptureSession_imageReader = null;
-//                    }
-//                }
-//        );
-//        cameraDevice.createCaptureSession(sessionConfiguration);
-    }
-
-
-//    private String getStringImage(Bitmap bitmap) {
-//        ByteArrayOutputStream bOutStream = new ByteArrayOutputStream();
-//        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, bOutStream);
-//
-////        store in byte array
-//        byte[] imageBytes = bOutStream.toByteArray();
-////        encode to string
-//        String encodedImage = android.util.Base64.encodeToString(imageBytes, Base64.DEFAULT);
-//        return encodedImage;
-//    }
 }
