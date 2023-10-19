@@ -12,6 +12,7 @@
         android:layout_height="wrap_content"
         android:onClick="buttonStartCamera"
         android:text="Start Camera"
+        android:background="@drawable/my_input_bg"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -23,6 +24,7 @@
         android:layout_height="wrap_content"
         android:onClick="buttonStopCamera"
         android:text="Stop camera"
+        android:background="@drawable/my_input_bg"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/button" />

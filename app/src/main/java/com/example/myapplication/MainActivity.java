@@ -280,7 +280,7 @@ public class MainActivity extends AppCompatActivity {
         textView.setBackgroundResource(backgroundResourceID);
         textView.setPadding(16, 8, 16, 8);
         textView.setText(text);
-        textView.setTextColor(Color.parseColor("#FFFFFF"));
+        textView.setTextColor(Color.parseColor(text_color));
         textView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
 
         return textView;
