@@ -5,18 +5,14 @@ import static android.Manifest.permission.CAMERA;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+import androidx.lifecycle.ViewModel;
 
-import android.app.Activity;
-import android.content.Intent;
+import android.content.Context;
 import android.content.pm.PackageManager;
-import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Camera;
+import android.graphics.Color;
 import android.graphics.ImageFormat;
-import android.graphics.Picture;
-import android.graphics.SurfaceTexture;
-import android.graphics.drawable.BitmapDrawable;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraManager;
@@ -28,30 +24,29 @@ import android.hardware.camera2.params.OutputConfiguration;
 import android.hardware.camera2.params.SessionConfiguration;
 import android.media.Image;
 import android.media.ImageReader;
-import android.net.wifi.aware.Characteristics;
 import android.os.Bundle;
-import android.util.Base64;
 import android.util.Log;
+import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.TextureView;
 import android.view.View;
-import android.view.Surface;
 
 import com.chaquo.python.Python;
 import com.chaquo.python.android.AndroidPlatform;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
-import java.util.Vector;
+import java.util.Random;
 
 import com.chaquo.python.PyObject;
 
 
 import android.os.ParcelFileDescriptor;
+import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 public class MainActivity extends AppCompatActivity {
@@ -71,48 +66,54 @@ public class MainActivity extends AppCompatActivity {
     private Python py;
     private int frame_count = 0;
     byte [][]frames;
-
-//    static {
-//        try {
-//            img_pipe = ParcelFileDescriptor.createPipe();
-//            text_pipe = ParcelFileDescriptor.createPipe();
-//        } catch (IOException e) {
-//            throw new RuntimeException(e);
-//        }
-//    }
+    private Boolean is_sign_mode;
+    private String current_text;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-//        Request camera permission
+        // Start Python
+        initPython();
+
+        // Request camera permission
         ActivityCompat.requestPermissions(this,
                 new String[]{CAMERA},
                 PackageManager.PERMISSION_GRANTED);
 
-//        access the texture for camera
+        // Initialize texture for camera
         pictureView = findViewById(R.id.picture);
 
-//        set camera manager
-        cameraManager = (CameraManager) getSystemService(CAMERA_SERVICE);
+        // Init imageReader, start image listener
+        initImageReader();
+        setupImageReaderListener();
 
-//        Log.d("width",  String.format("value = %d", pictureView.getLayoutParams().width));
-//        Log.d("height", String.format("value = %d", pictureView.getLayoutParams().height));
         frames = new byte[20][];
 
-//        start Python
+        // Set camera manager
+        cameraManager = (CameraManager) getSystemService(CAMERA_SERVICE);
+        startCamera();
+    }
+
+    private void initPython() {
         if (!Python.isStarted()) {
             Python.start(new AndroidPlatform(this));
         }
         py = Python.getInstance();
+        PyObject sendFrameModule = py.getModule("Connect");
+        sendFrameModule.callAttr("init_slr");
+    }
 
-//        prepare imageReader
+    private void initImageReader() {
         imageReader = ImageReader.newInstance(
                 pictureView.getLayoutParams().width,
                 pictureView.getLayoutParams().height,
-                ImageFormat.JPEG,2
+                ImageFormat.JPEG, 2
         );
+    }
+
+    private void setupImageReaderListener() {
         imageReader.setOnImageAvailableListener(new ImageReader.OnImageAvailableListener() {
             @Override
             public void onImageAvailable(ImageReader reader) {
@@ -121,64 +122,186 @@ public class MainActivity extends AppCompatActivity {
                 if (image == null) return;
                 ByteBuffer buffer= image.getPlanes()[0].getBuffer();
                 int length= buffer.remaining();
-                byte[] bytes= new byte[length];
 
+                // Get image
+                byte[] bytes = new byte[length];
                 frames[frame_count] = new byte[length];
                 buffer.get(frames[frame_count]);
 
                 image.close();
 
+                // Show preview
                 Bitmap bmp = BitmapFactory.decodeByteArray(frames[frame_count], 0, length);
                 ImageView displayPicture = findViewById(R.id.picture);
                 displayPicture.setImageBitmap(bmp);
 
                 frame_count++;
-//                Send frames to AI module when 20 frames are collected
-                if (frame_count == 1) {
+                
+                // Send frames to AI module when 20 frames are collected
+                if (frame_count == 20) {
                     frame_count = 0;
-//                Rotate image and show the preview
-                    PyObject rotateModule = py.getModule("Rotation");
-                    rotateModule.callAttr("rotation_func", frames);
+                    processCapturedImage(reader, bytes);
 
-//                TODO: Add AI entry point here!!
-//                PyObject aiModule = py.getModule("AI_file");
-//                String aiResult = aiModule.callAttr("func_name", rotationResult).toJava(String.class);
-
-//                String result = aiModule.callAttr("hello_func", bytes).toJava(String.class);
-//                TextView txt = findViewById(R.id.textView);
-//                txt.setText(result);
+                //  Rotate image and show the preview
+//                     PyObject rotateModule = py.getModule("Rotation");
+//                     rotateModule.callAttr("rotation_func", frames);
                 }
-
-
             }
         }, null);
-
-//      prepare texture listener
-//        surfaceTextureListener = new TextureView.SurfaceTextureListener() {
-//            @Override
-//            public void onSurfaceTextureAvailable(@NonNull SurfaceTexture surface, int width, int height) {
-////                startCamera();
-//            }
-//
-//            @Override
-//            public void onSurfaceTextureSizeChanged(@NonNull SurfaceTexture surface, int width, int height) {
-//
-//            }
-//
-//            @Override
-//            public boolean onSurfaceTextureDestroyed(@NonNull SurfaceTexture surface) {
-//                return false;
-//            }
-//
-//            @Override
-//            public void onSurfaceTextureUpdated(@NonNull SurfaceTexture surface) {
-//
-//            }
-//        };
-//        textureView.setSurfaceTextureListener(surfaceTextureListener);
-
-        startCamera();
     }
+
+    private void processCapturedImage(ImageReader reader, byte[] bytes) {
+//      TODO: Add AI entry point here!!
+        PyObject sendFrameModule = py.getModule("Connect");
+        boolean sendResult = sendFrameModule.callAttr("send_frame", frames).toJava(boolean.class);
+
+        String result = sendFrameModule.callAttr("get_text").toJava(String.class);
+        String model_return;
+
+        if (is_sign_mode == Boolean.TRUE) {
+            // TODO: 接Sign mode model
+            Random random = new Random();
+
+// Generate a random number between 0 and 2 (inclusive)
+            int randomValue = random.nextInt(3);
+
+            switch (randomValue) {
+                case 0:
+                    model_return = "Hello";
+                    break;
+                case 1:
+                    model_return = "#";
+                    break;
+                case 2:
+                    model_return = "@my name is Emerald";
+                    break;
+                default:
+                    model_return = "@Hi"; // Default value in case of unexpected randomValue
+            }
+        } else {
+            // TODO: 接command mode model
+            Random random = new Random();
+
+// Generate a random number between 0 and 2 (inclusive)
+            int randomValue = random.nextInt(3);
+
+            switch (randomValue) {
+                case 0:
+                    model_return = "Hello";
+                    break;
+                case 1:
+                    model_return = "#";
+                    break;
+                case 2:
+                    model_return = "@my name is Emerald";
+                    break;
+                default:
+                    model_return = "@Hi";
+            }
+        }
+
+        return_text_processing(model_return);
+    }
+
+    public class textData extends ViewModel {
+        public  textData(){
+            responseSet = new ArrayList<>(Arrays.asList("要不要一起去吃飯?","要不要找更多人?"));
+        }
+        private int resIndex = 0;
+        private ArrayList<String> responseSet;
+        public String getResponse(){
+            if(resIndex<responseSet.size()){
+                return responseSet.get(resIndex++);
+            }
+            else return "";
+        }
+
+    }
+
+    private void return_text_processing(String new_text){
+        if (new_text.length() > 0 && new_text.charAt(0) == '@') {
+            // Check if the string is not empty and the first character is "@"
+            new_text = new_text.substring(1); // Remove the first character
+            current_text = (current_text != null) ? current_text + " " + new_text : new_text;
+
+            // Switch mode to function mode
+            is_sign_mode = Boolean.FALSE;
+        }
+        else if(new_text == "#"){ // enter
+            if (current_text != null) {
+                LinearLayout linearLayout = findViewById(R.id.convo);
+                addStyledTextViewToLayout(linearLayout, current_text, true);
+                current_text = null;
+            }
+        }
+        else if(new_text == "$"){ // restart
+            // switch mode to Sign mode
+            current_text = null;
+            is_sign_mode = Boolean.TRUE;
+        }
+        else if(new_text == "%"){ // delete
+            current_text = null;
+        }
+        else if(new_text == "^"){ // exit
+            current_text = null;
+            // TODO: some function to close the camera texture
+        }
+        else if(new_text == "&"){ // empty value
+
+        }
+        else{ // regular text
+            current_text = (current_text != null) ? current_text + new_text : new_text;
+        }
+        TextView display_text = findViewById(R.id.display_text);
+        display_text.setText(current_text);
+
+    }
+
+    private void addStyledTextViewToLayout(LinearLayout layout, String text, boolean is_my_text) {
+        // Create and configure a new TextView
+        TextView styledTextView = createStyledTextView(this, text, is_my_text);
+
+        View spacer = new View(this);
+        spacer.setLayoutParams(new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dpToPx(10) // Convert dp to pixels (10dp)
+        ));
+
+        layout.addView(styledTextView);
+        layout.addView(spacer);
+    }
+
+
+    // Function to convert dp to pixels
+    public int dpToPx(int dp) {
+        float density = getResources().getDisplayMetrics().density;
+        return Math.round(dp * density);
+    }
+
+    private TextView createStyledTextView(Context context, String text, Boolean is_my_text) {
+        int gravity = Gravity.START, backgroundResourceID = R.drawable.your_input_bg;
+        String text_color = "#4285F4";
+        if(is_my_text == Boolean.TRUE){
+            gravity = Gravity.END;
+            backgroundResourceID = R.drawable.my_input_bg;
+            text_color = "#FAF9F6";
+        }
+        TextView textView = new TextView(context);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        params.gravity = gravity;
+
+        textView.setLayoutParams(params);
+        textView.setBackgroundResource(backgroundResourceID);
+        textView.setPadding(16, 8, 16, 8);
+        textView.setText(text);
+        textView.setTextColor(Color.parseColor("#FFFFFF"));
+        textView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+
+        return textView;
+    }
+
 
     private CameraDevice.StateCallback stateCallback = new CameraDevice.StateCallback() {
         @Override
@@ -197,25 +320,6 @@ public class MainActivity extends AppCompatActivity {
             cameraDevice = null;
         }
     };
-
-
-    private int getJpegOrientation(CameraCharacteristics c, int deviceOrientation) {
-        if (deviceOrientation == android.view.OrientationEventListener.ORIENTATION_UNKNOWN) return 0;
-        int sensorOrientation = c.get(CameraCharacteristics.SENSOR_ORIENTATION);
-
-        // Round device orientation to a multiple of 90
-        deviceOrientation = (deviceOrientation + 45) / 90 * 90;
-
-        // Reverse device orientation for front-facing cameras
-        boolean facingFront = c.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT;
-        if (facingFront) deviceOrientation = -deviceOrientation;
-
-        // Calculate desired JPEG orientation relative to camera orientation to make
-        // the image upright relative to the device orientation
-        int jpegOrientation = (sensorOrientation + deviceOrientation + 360) % 360;
-
-        return jpegOrientation;
-    }
 
     private void startCamera() {
         try {
@@ -281,50 +385,26 @@ public class MainActivity extends AppCompatActivity {
                 }
         );
         cameraDevice.createCaptureSession(sessionConfiguration);
-////        SurfaceTexture surfaceTexture = textureView.getSurfaceTexture();
-////        Surface surface = new Surface(surfaceTexture);
-//        Surface imageSurface = imageReader.getSurface();
-//
-//        try {
-//            captureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-////            captureRequestBuilder.addTarget(surface);
-//            captureRequestBuilder.addTarget(imageSurface);
-//
-////            OutputConfiguration outputConfiguration = new OutputConfiguration(surface);
-//            OutputConfiguration outputConfiguration_image = new OutputConfiguration(imageSurface);
-//            Vector<OutputConfiguration> outputVec = new Vector<OutputConfiguration>();
-////            outputVec.add(outputConfiguration);
-//            outputVec.add(outputConfiguration_image);
-//
-//            SessionConfiguration sessionConfiguration = new SessionConfiguration(SessionConfiguration.SESSION_REGULAR,
-//                    Collections.list(outputVec.elements()),
-////                    Collections.singletonList(outputConfiguration),
-//                    getMainExecutor(),
-//                    new CameraCaptureSession.StateCallback() {
-//                        @Override
-//                        public void onConfigured(@NonNull CameraCaptureSession session) {
-//                            cameraCaptureSession = session;
-//                            captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE,
-//                                    CameraMetadata.CONTROL_MODE_AUTO);
-//
-//                            try {
-//                                cameraCaptureSession.setRepeatingRequest(captureRequestBuilder.build(), null, null);
-//                            } catch (CameraAccessException e) {
-//                               e.printStackTrace();
-//                            }
-//                        }
-//                        @Override
-//                        public void onConfigureFailed(@NonNull CameraCaptureSession session) {
-//                            cameraCaptureSession = null;
-//                        }
-//                    }
-//            );
-//
-//            cameraDevice.createCaptureSession(sessionConfiguration);
-//        } catch (CameraAccessException e) {
-//            throw new RuntimeException(e);
-//        }
     }
+
+    private int getJpegOrientation(CameraCharacteristics c, int deviceOrientation) {
+        if (deviceOrientation == android.view.OrientationEventListener.ORIENTATION_UNKNOWN) return 0;
+        int sensorOrientation = c.get(CameraCharacteristics.SENSOR_ORIENTATION);
+
+        // Round device orientation to a multiple of 90
+        deviceOrientation = (deviceOrientation + 45) / 90 * 90;
+
+        // Reverse device orientation for front-facing cameras
+        boolean facingFront = c.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT;
+        if (facingFront) deviceOrientation = -deviceOrientation;
+
+        // Calculate desired JPEG orientation relative to camera orientation to make
+        // the image upright relative to the device orientation
+        int jpegOrientation = (sensorOrientation + deviceOrientation + 360) % 360;
+
+        return jpegOrientation;
+    }
+
     public void buttonStopCamera(View view) {
         try {
             if (cameraCaptureSession_imageReader != null) cameraCaptureSession_imageReader.abortCaptures();
@@ -335,53 +415,4 @@ public class MainActivity extends AppCompatActivity {
 //        if (cameraDevice != null) cameraDevice.close(); // this will shut down the app, don't use it
     }
 
-    public void capture_image(View view) throws CameraAccessException {
-
-//        try {
-//            captureRequestBuilder_imgReader = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
-//        } catch (CameraAccessException e) {
-//            e.printStackTrace();
-//        }
-//        captureRequestBuilder_imgReader.addTarget(imageReader.getSurface());
-//
-//        OutputConfiguration outputConfiguration = new OutputConfiguration(imageReader.getSurface());
-//        SessionConfiguration sessionConfiguration = new SessionConfiguration(SessionConfiguration.SESSION_REGULAR,
-//                Collections.singletonList(outputConfiguration),
-//                getMainExecutor(),
-//                new CameraCaptureSession.StateCallback() {
-//                    @Override
-//                    public void onConfigured(@NonNull CameraCaptureSession session) {
-//                        if (session == null) return;
-//                        cameraCaptureSession_imageReader = session;
-//                        captureRequestBuilder_imgReader.set(CaptureRequest.JPEG_ORIENTATION, 90);
-//                        captureRequestBuilder_imgReader.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_START);
-//
-//                        try {
-//                            cameraCaptureSession_imageReader.setRepeatingRequest(captureRequestBuilder_imgReader.build(), null, null);
-//                        } catch (CameraAccessException e) {
-//                            e.printStackTrace();
-//                        }
-////                        unlockFocus();
-//                    }
-//
-//                    @Override
-//                    public void onConfigureFailed(@NonNull CameraCaptureSession session) {
-//                        cameraCaptureSession_imageReader = null;
-//                    }
-//                }
-//        );
-//        cameraDevice.createCaptureSession(sessionConfiguration);
-    }
-
-
-//    private String getStringImage(Bitmap bitmap) {
-//        ByteArrayOutputStream bOutStream = new ByteArrayOutputStream();
-//        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, bOutStream);
-//
-////        store in byte array
-//        byte[] imageBytes = bOutStream.toByteArray();
-////        encode to string
-//        String encodedImage = android.util.Base64.encodeToString(imageBytes, Base64.DEFAULT);
-//        return encodedImage;
-//    }
 }

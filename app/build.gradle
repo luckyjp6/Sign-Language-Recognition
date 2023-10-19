@@ -28,7 +28,7 @@ android {
             pip{
                 install "opencv-python"
                 install "numpy"
-//                install "pillow"
+                install "requests"
             }
         }
     }
