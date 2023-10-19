@@ -120,10 +120,10 @@ public class MainActivity extends AppCompatActivity {
                 image.close();
 
 //                Rotate image and show the preview
-                PyObject rotateModule = py.getModule("Rotation");
-                byte[] rotationResult = rotateModule.callAttr("rotation_func", bytes).toJava(byte[].class);
+//                PyObject rotateModule = py.getModule("Rotation");
+//                byte[] rotationResult = rotateModule.callAttr("rotation_func", bytes).toJava(byte[].class);
 
-                Bitmap bmp = BitmapFactory.decodeByteArray(rotationResult, 0, rotationResult.length);
+                Bitmap bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
                 ImageView displayPicture = findViewById(R.id.picture);
                 displayPicture.setImageBitmap(bmp);
 
