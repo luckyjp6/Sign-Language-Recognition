@@ -46,6 +46,7 @@ import android.os.ParcelFileDescriptor;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
 public class MainActivity extends AppCompatActivity {
@@ -239,6 +240,8 @@ public class MainActivity extends AppCompatActivity {
         TextView display_text = findViewById(R.id.display_text);
         display_text.setText(current_text);
 
+        ScrollView scrollView = findViewById(R.id.scrollView);
+        scrollView.fullScroll(View.FOCUS_DOWN);
     }
 
     private void addStyledTextViewToLayout(LinearLayout layout, String text, boolean is_my_text) {
