@@ -2,6 +2,8 @@ package com.example.myapplication;
 
 import static android.Manifest.permission.CAMERA;
 
+import static java.lang.System.exit;
+
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
@@ -33,8 +35,11 @@ import com.chaquo.python.Python;
 import com.chaquo.python.android.AndroidPlatform;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.nio.ByteBuffer;
@@ -69,6 +74,7 @@ public class MainActivity extends AppCompatActivity {
     private String model_return;
     private Boolean is_sign_mode;
     private String current_text;
+    private int skipCount = 0;
 
     private float offsetX, offsetY;
 
@@ -138,9 +144,14 @@ public class MainActivity extends AppCompatActivity {
                 frame = new byte[length];
                 buffer.get(frame);
 
-                // Send image to AI module
-                mThread socketThread = new mThread();
-                socketThread.start();
+//                skipCount++;
+//
+//                if (skipCount == 1000) {
+//                    skipCount = 0;
+//                    // Send image to AI module
+//                    mThread socketThread = new mThread();
+//                    socketThread.start();
+//                }
 
                 image.close();
 
@@ -150,6 +161,27 @@ public class MainActivity extends AppCompatActivity {
                 displayPicture.setImageBitmap(bmp);
             }
         }, null);
+    }
+
+    private void setupCameraTouchListener() {
+        pictureView.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        // 記錄觸摸點與圖片左上角的偏移量
+                        offsetX = event.getX() - pictureView.getX();
+                        offsetY = event.getY() - pictureView.getY();
+                        break;
+                    case MotionEvent.ACTION_MOVE:
+                        // 跟蹤手指移動，更新圖片位置
+                        pictureView.setX(event.getX() - offsetX);
+                        pictureView.setY(event.getY() - offsetY);
+                        break;
+                }
+                return true;
+            }
+        });
     }
 
     public class mThread extends Thread {
@@ -175,19 +207,17 @@ public class MainActivity extends AppCompatActivity {
 
     public class SocketClient {
         private Socket aiSever;
-        private PrintWriter printWriter;
+//        private PrintWriter printWriter;
         private BufferedReader bufferedReader;
 
         private void init () {
             try {
                 aiSever = new Socket("140.113.141.90", 12345);
-                printWriter = new PrintWriter(aiSever.getOutputStream());
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
         }
         private void close() {
-            if (printWriter != null) printWriter.close();
             if (bufferedReader != null) {
                 try {
                     bufferedReader.close();
@@ -206,15 +236,27 @@ public class MainActivity extends AppCompatActivity {
         public void send_init () {
             init();
 
-            printWriter.write("init");
-            printWriter.flush();
+            OutputStream outputStream;
+            try {
+                outputStream = aiSever.getOutputStream();
+                outputStream.write("init".getBytes());
+                outputStream.flush();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
 
             close();
         }
         public void send_request() {
             init();
-            printWriter.write("request");
-            printWriter.flush();
+            OutputStream outputStream;
+            try {
+                outputStream = aiSever.getOutputStream();
+                outputStream.write("request".getBytes());
+                outputStream.flush();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
 
             try {
                 bufferedReader = new BufferedReader(new InputStreamReader(aiSever.getInputStream()));
@@ -232,9 +274,17 @@ public class MainActivity extends AppCompatActivity {
         }
         public void send_frame () {
             init();
-            printWriter.write(Arrays.toString(frame));
-            printWriter.flush();
-
+//            Log.d("length", Integer.toString(frame.length));
+            OutputStream outputStream;
+            try {
+                ByteArrayOutputStream bOutputStream = new ByteArrayOutputStream();
+                outputStream = aiSever.getOutputStream();
+                outputStream.write(Integer.toString(frame.length).getBytes());
+                outputStream.write(frame);
+                outputStream.flush();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
             close();
         }
     }
@@ -259,7 +309,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
-    
+
     private void processCapturedImage() {
         // Get text result from AI module
         mThread requestThread = new mThread();
