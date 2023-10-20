@@ -397,7 +397,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void button_lit_up(ImageView icon) {
-        icon.setBackgroundColor(Color.parseColor("#60F4B400"));
+        icon.setBackgroundColor(R.drawable.button_bg);
 
         // Use a Handler to dismiss the dialog after a short delay (e.g., 2 seconds)
         Handler handler = new Handler();
