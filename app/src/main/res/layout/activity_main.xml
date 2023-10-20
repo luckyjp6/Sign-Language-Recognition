@@ -118,6 +118,7 @@
         android:layout_height="241dp"
         android:visibility="visible"
         android:rotation="270"
+        android:scaleX="-1"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.9"
