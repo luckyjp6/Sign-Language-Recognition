@@ -8,8 +8,10 @@
 
     <Button
         android:id="@+id/startCamera"
-        android:layout_width="390dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
+        android:layout_marginEnd="10dp"
         android:background="#00FFFFFF"
         android:onClick="buttonStartCamera"
         app:layout_constraintBottom_toBottomOf="@+id/display_text"
@@ -19,12 +21,14 @@
 
     <TextView
         android:id="@+id/display_text"
-        android:layout_width="390dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_centerInParent="true"
         android:layout_marginBottom="16dp"
+        android:layout_marginStart="10dp"
+        android:layout_marginEnd="10dp"
         android:background="@drawable/my_input_bg"
-        android:paddingStart="16dp"
+        android:paddingStart="20dp"
         android:paddingTop="8dp"
         android:paddingEnd="16dp"
         android:paddingBottom="8dp"
@@ -42,6 +46,7 @@
         android:orientation="horizontal"
         android:gravity="center"
         android:paddingBottom="8dp"
+        android:visibility="gone"
         app:layout_constraintBottom_toTopOf="@+id/display_text">
 
         <ImageView
@@ -84,10 +89,11 @@
     <ScrollView
         android:id="@+id/scrollView"
         android:layout_width="380dp"
-        android:layout_height="600dp"
+        android:layout_height="580dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.495"
+        app:layout_constraintVertical_bias="0.3"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
@@ -119,6 +125,7 @@
             android:layout_width="216dp"
             android:layout_height="241dp"
             android:rotation="270"
+            android:rotationY="180"
             android:visibility="visible" />
 
         <ImageButton
