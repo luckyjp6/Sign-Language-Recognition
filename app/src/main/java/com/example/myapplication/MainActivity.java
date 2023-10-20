@@ -52,6 +52,8 @@ import java.util.Random;
 import com.chaquo.python.PyObject;
 
 import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -64,6 +66,8 @@ import android.view.ViewGroup;
 
 public class MainActivity extends AppCompatActivity {
     private ImageView pictureView;
+    private FrameLayout pictureFrame;
+
     private CameraCaptureSession cameraCaptureSession_imageReader;
     private CameraManager cameraManager;
     private CameraDevice cameraDevice;
@@ -85,9 +89,9 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         // Start socket thread
-        mThread initThread = new mThread();
-        threadInstruction = "init";
-        initThread.start();
+//        mThread initThread = new mThread();
+//        threadInstruction = "init";
+//        initThread.start();
 
         // Start Python
 //        initPython();
@@ -99,6 +103,10 @@ public class MainActivity extends AppCompatActivity {
 
         // Initialize texture for camera
         pictureView = findViewById(R.id.picture);
+
+        // Initialize picture FrameLayout, start Camera touch listener
+        pictureFrame = findViewById(R.id.picture_frame);
+        pictureFrame.setVisibility(View.GONE);
         setupCameraTouchListener();
 
         // Init imageReader, start image listener
@@ -110,11 +118,11 @@ public class MainActivity extends AppCompatActivity {
         cameraManager = (CameraManager) getSystemService(CAMERA_SERVICE);
         startCamera();
 
-        try {
-            initThread.join();
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
+//        try {
+//            initThread.join();
+//        } catch (InterruptedException e) {
+//            throw new RuntimeException(e);
+//        }
     }
 
 //    private void initPython() {
@@ -165,19 +173,19 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupCameraTouchListener() {
-        pictureView.setOnTouchListener(new View.OnTouchListener() {
+        pictureFrame.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 switch (event.getAction()) {
                     case MotionEvent.ACTION_DOWN:
                         // 記錄觸摸點與圖片左上角的偏移量
-                        offsetX = event.getX() - pictureView.getX();
-                        offsetY = event.getY() - pictureView.getY();
+                        offsetX = event.getX() - pictureFrame.getX();
+                        offsetY = event.getY() - pictureFrame.getY();
                         break;
                     case MotionEvent.ACTION_MOVE:
                         // 跟蹤手指移動，更新圖片位置
-                        pictureView.setX(event.getX() - offsetX);
-                        pictureView.setY(event.getY() - offsetY);
+                        pictureFrame.setX(event.getX() - offsetX);
+                        pictureFrame.setY(event.getY() - offsetY);
                         break;
                 }
                 return true;
@@ -523,7 +531,15 @@ public class MainActivity extends AppCompatActivity {
         cameraDevice.createCaptureSession(sessionConfiguration);
 
         // show up camera image
-        pictureView.setVisibility(View.VISIBLE);
+        pictureFrame.setVisibility(View.VISIBLE);
+
+        // disable button of startCamera
+        Button startCameraButton = findViewById(R.id.startCamera);
+        startCameraButton.setVisibility(View.GONE);
+
+        // remove initial text
+        TextView displayText = findViewById(R.id.display_text);
+        displayText.setText("");
     }
 
     public void buttonStopCamera(View view) {
@@ -535,7 +551,15 @@ public class MainActivity extends AppCompatActivity {
 //        if (cameraDevice != null) cameraDevice.close(); // this will shut down the app, don't use it
 
         // turn off camera image
-        pictureView.setVisibility(View.GONE);
+        pictureFrame.setVisibility(View.GONE);
+
+        // disable button of startCamera
+        Button startCameraButton = findViewById(R.id.startCamera);
+        startCameraButton.setVisibility(View.VISIBLE);
+
+        // show initial text
+        TextView displayText = findViewById(R.id.display_text);
+        displayText.setText("Enter a message");
     }
 
 }
