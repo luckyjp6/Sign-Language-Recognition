@@ -26,6 +26,7 @@ import android.hardware.camera2.params.SessionConfiguration;
 import android.media.Image;
 import android.media.ImageReader;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -289,27 +290,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void setupCameraTouchListener() {
-        pictureView.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                switch (event.getAction()) {
-                    case MotionEvent.ACTION_DOWN:
-                        // 記錄觸摸點與圖片左上角的偏移量
-                        offsetX = event.getX() - pictureView.getX();
-                        offsetY = event.getY() - pictureView.getY();
-                        break;
-                    case MotionEvent.ACTION_MOVE:
-                        // 跟蹤手指移動，更新圖片位置
-                        pictureView.setX(event.getX() - offsetX);
-                        pictureView.setY(event.getY() - offsetY);
-                        break;
-                }
-                return true;
-            }
-        });
-    }
-
     private void processCapturedImage() {
         // Get text result from AI module
         mThread requestThread = new mThread();
@@ -327,48 +307,6 @@ public class MainActivity extends AppCompatActivity {
 //        String result = sendFrameModule.callAttr("get_text").toJava(String.class);
 
 //        String model_return; -> I move this as global variable, so as to modify its value in another thread
-
-        if (is_sign_mode == Boolean.TRUE) {
-            // TODO: 接Sign mode model
-            Random random = new Random();
-
-// Generate a random number between 0 and 2 (inclusive)
-            int randomValue = random.nextInt(3);
-
-            switch (randomValue) {
-                case 0:
-                    model_return = "Hello";
-                    break;
-                case 1:
-                    model_return = "#";
-                    break;
-                case 2:
-                    model_return = "@my name is Emerald";
-                    break;
-                default:
-                    model_return = "@Hi"; // Default value in case of unexpected randomValue
-            }
-        } else {
-            // TODO: 接command mode model
-            Random random = new Random();
-
-// Generate a random number between 0 and 2 (inclusive)
-            int randomValue = random.nextInt(3);
-
-            switch (randomValue) {
-                case 0:
-                    model_return = "Hello";
-                    break;
-                case 1:
-                    model_return = "#";
-                    break;
-                case 2:
-                    model_return = "@my name is Emerald";
-                    break;
-                default:
-                    model_return = "@Hi";
-            }
-        }
 
         return_text_processing(model_return);
     }
@@ -390,13 +328,21 @@ public class MainActivity extends AppCompatActivity {
 
     private void return_text_processing(String new_text){
         LinearLayout command_icon = findViewById(R.id.command_icon);
+        ImageView restart_icon = findViewById(R.id.restart);
+        ImageView exit_icon = findViewById(R.id.exit);
+        ImageView delete_icon = findViewById(R.id.delete);
+        ImageView enter_icon = findViewById(R.id.send);
+
         if (new_text.length() > 0 && new_text.charAt(0) == '@') {
             // Check if the string is not empty and the first character is "@"
             new_text = new_text.substring(1); // Remove the first character
+
+            // append new sentence
             current_text = (current_text != null) ? current_text + " " + new_text : new_text;
 
             // Switch mode to command mode
             is_sign_mode = Boolean.FALSE;
+
             // To hide all icons
             command_icon.setVisibility(View.VISIBLE);
         }
@@ -406,20 +352,31 @@ public class MainActivity extends AppCompatActivity {
                 addStyledTextViewToLayout(linearLayout, current_text, true);
                 current_text = null;
             }
+            // lit up enter icon
+            button_lit_up(enter_icon);
         }
         else if(new_text.equals("$")){ // restart
             // switch mode to Sign mode
             current_text = null;
             is_sign_mode = Boolean.TRUE;
+
+            // lit up restart icon
+            button_lit_up(restart_icon);
+
             // To hide all icons
             command_icon.setVisibility(View.GONE);
         }
         else if(new_text.equals("%")){ // delete
             current_text = null;
+            // lit up delete icon
+            button_lit_up(delete_icon);
         }
         else if(new_text.equals("^")){ // exit
             current_text = null;
             // TODO: some function to close the camera texture
+
+            // lit up exit icon
+            button_lit_up(exit_icon);
 
             // To hide all icons
             command_icon.setVisibility(View.GONE);
@@ -430,11 +387,26 @@ public class MainActivity extends AppCompatActivity {
         else{ // regular text
             current_text = (current_text != null) ? current_text + new_text : new_text;
         }
+        // set current message
         TextView display_text = findViewById(R.id.display_text);
         display_text.setText(current_text);
 
+        // Chatroom update
         ScrollView scrollView = findViewById(R.id.scrollView);
         scrollView.fullScroll(View.FOCUS_DOWN);
+    }
+
+    private void button_lit_up(ImageView icon) {
+        icon.setBackgroundColor(Color.parseColor("#60F4B400"));
+
+        // Use a Handler to dismiss the dialog after a short delay (e.g., 2 seconds)
+        Handler handler = new Handler();
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                icon.setBackgroundResource(0);
+            }
+        }, 1000); // 1000 milliseconds (2 seconds)
     }
 
     private void addStyledTextViewToLayout(LinearLayout layout, String text, boolean is_my_text) {
