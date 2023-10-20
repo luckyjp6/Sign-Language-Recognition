@@ -76,7 +76,7 @@ public class MainActivity extends AppCompatActivity {
     private CaptureRequest.Builder captureRequestBuilder_imgReader;
     private ImageReader imageReader;
     private Python py;
-    private String threadInstruction;
+    private String threadInstruction = "";
     private byte [] frame;
     private Bitmap bmp;
     private String model_return;
@@ -92,9 +92,9 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         // Start socket thread
-//        mThread initThread = new mThread();
-//        threadInstruction = "init";
-//        initThread.start();
+        mThread initThread = new mThread();
+        threadInstruction = "init";
+        initThread.start();
 
         // Start Python
 //        initPython();
@@ -125,11 +125,11 @@ public class MainActivity extends AppCompatActivity {
         cameraManager = (CameraManager) getSystemService(CAMERA_SERVICE);
         startCamera();
 
-//        try {
-//            initThread.join();
-//        } catch (InterruptedException e) {
-//            throw new RuntimeException(e);
-//        }
+        try {
+            initThread.join();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
     }
 
 //    private void initPython() {
@@ -167,7 +167,7 @@ public class MainActivity extends AppCompatActivity {
 
                 skipCount++;
 //
-                if (skipCount == 10) {
+                if (skipCount == 5) {
                     // Send image to AI module
                     skipCount = 0;
                     mThread socketThread = new mThread();
@@ -356,12 +356,6 @@ public class MainActivity extends AppCompatActivity {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
-
-//        PyObject sendFrameModule = py.getModule("Connect");
-//        String result = sendFrameModule.callAttr("get_text").toJava(String.class);
-
-//        String model_return; -> I move this as global variable, so as to modify its value in another thread
-
         return_text_processing(model_return);
     }
 
