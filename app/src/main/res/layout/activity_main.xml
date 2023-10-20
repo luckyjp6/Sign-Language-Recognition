@@ -92,10 +92,10 @@
         android:layout_height="580dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.495"
-        app:layout_constraintVertical_bias="0.3"
+        app:layout_constraintHorizontal_bias="0.516"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.298">
 
         <LinearLayout
             android:id="@+id/convo"
@@ -111,8 +111,6 @@
         android:layout_width="216dp"
         android:layout_height="241dp"
         android:visibility="visible"
-        android:rotation="270"
-        android:scaleX="-1"
         app:layout_constraintHorizontal_bias="0.9"
         app:layout_constraintVertical_bias="0.03"
         app:layout_constraintBottom_toBottomOf="parent"
