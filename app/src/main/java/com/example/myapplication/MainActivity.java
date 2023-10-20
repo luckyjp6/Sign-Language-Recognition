@@ -70,7 +70,8 @@ public class MainActivity extends AppCompatActivity {
     private ImageReader imageReader;
     private Python py;
     private String threadInstruction;
-    byte [] frame;
+    private byte [] frame;
+    private Bitmap bmp;
     private String model_return;
     private Boolean is_sign_mode;
     private String current_text;
@@ -144,21 +145,22 @@ public class MainActivity extends AppCompatActivity {
                 frame = new byte[length];
                 buffer.get(frame);
 
-//                skipCount++;
+                // Show preview
+                bmp = BitmapFactory.decodeByteArray(frame, 0, length);
+                ImageView displayPicture = findViewById(R.id.picture);
+                displayPicture.setImageBitmap(bmp);
+
+                skipCount++;
 //
-//                if (skipCount == 1000) {
-//                    skipCount = 0;
-//                    // Send image to AI module
-//                    mThread socketThread = new mThread();
-//                    socketThread.start();
-//                }
+                if (skipCount == 10) {
+                    // Send image to AI module
+                    skipCount = 0;
+                    mThread socketThread = new mThread();
+                    socketThread.start();
+                }
 
                 image.close();
 
-                // Show preview
-                Bitmap bmp = BitmapFactory.decodeByteArray(frame, 0, length);
-                ImageView displayPicture = findViewById(R.id.picture);
-                displayPicture.setImageBitmap(bmp);
             }
         }, null);
     }
@@ -212,7 +214,7 @@ public class MainActivity extends AppCompatActivity {
 
         private void init () {
             try {
-                aiSever = new Socket("140.113.141.90", 12345);
+                aiSever = new Socket("140.113.141.90", 23456);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -277,10 +279,11 @@ public class MainActivity extends AppCompatActivity {
 //            Log.d("length", Integer.toString(frame.length));
             OutputStream outputStream;
             try {
-                ByteArrayOutputStream bOutputStream = new ByteArrayOutputStream();
+
                 outputStream = aiSever.getOutputStream();
                 outputStream.write(Integer.toString(frame.length).getBytes());
                 outputStream.write(frame);
+//                bmp.compress(Bitmap.CompressFormat.JPEG, 50, outputStream);
                 outputStream.flush();
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -510,8 +513,8 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onConfigured(@NonNull CameraCaptureSession session) {
                         cameraCaptureSession_imageReader = session;
-                        captureRequestBuilder_imgReader.set(CaptureRequest.JPEG_ORIENTATION, 0);
-
+//                        captureRequestBuilder_imgReader.set(CaptureRequest.JPEG_ORIENTATION, 0);
+//                        captureRequestBuilder_imgReader.set(CaptureRequest.JPEG_QUALITY, (byte) 40);
                         captureRequestBuilder_imgReader.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_START);
 
                         try {
