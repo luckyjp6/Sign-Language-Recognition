@@ -6,9 +6,12 @@ import static java.lang.System.exit;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.app.ActivityCompat;
 import androidx.lifecycle.ViewModel;
 
+import android.content.ClipData;
+import android.content.ClipDescription;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
@@ -26,6 +29,7 @@ import android.hardware.camera2.params.SessionConfiguration;
 import android.media.Image;
 import android.media.ImageReader;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -51,18 +55,21 @@ import java.util.Random;
 import com.chaquo.python.PyObject;
 
 import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
 import android.view.MotionEvent;
-import android.view.View;
-import android.widget.ImageView;
-import android.view.ViewGroup;
+
+import android.view.DragEvent;
 
 public class MainActivity extends AppCompatActivity {
     private ImageView pictureView;
+    private FrameLayout pictureFrame;
+    private ConstraintLayout screenLayout;
     private CameraCaptureSession cameraCaptureSession_imageReader;
     private CameraManager cameraManager;
     private CameraDevice cameraDevice;
@@ -76,8 +83,8 @@ public class MainActivity extends AppCompatActivity {
     private Boolean is_sign_mode;
     private String current_text;
     private int skipCount = 0;
-
-    private float offsetX, offsetY;
+    private float drag_x, drag_y;
+    private Boolean cameraInScreen;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -85,9 +92,9 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         // Start socket thread
-        mThread initThread = new mThread();
-        threadInstruction = "init";
-        initThread.start();
+//        mThread initThread = new mThread();
+//        threadInstruction = "init";
+//        initThread.start();
 
         // Start Python
 //        initPython();
@@ -99,7 +106,15 @@ public class MainActivity extends AppCompatActivity {
 
         // Initialize texture for camera
         pictureView = findViewById(R.id.picture);
+
+        // Initialize picture FrameLayout, start Camera touch listener
+        pictureFrame = findViewById(R.id.picture_frame);
+        pictureFrame.setVisibility(View.GONE);
         setupCameraTouchListener();
+
+        // Initialize  Screen, start Drag Listener
+        screenLayout = findViewById(R.id.screen_layout);
+        setupLayoutOnDragListener();
 
         // Init imageReader, start image listener
         initImageReader();
@@ -110,11 +125,11 @@ public class MainActivity extends AppCompatActivity {
         cameraManager = (CameraManager) getSystemService(CAMERA_SERVICE);
         startCamera();
 
-        try {
-            initThread.join();
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
+//        try {
+//            initThread.join();
+//        } catch (InterruptedException e) {
+//            throw new RuntimeException(e);
+//        }
     }
 
 //    private void initPython() {
@@ -166,22 +181,59 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupCameraTouchListener() {
-        pictureView.setOnTouchListener(new View.OnTouchListener() {
+        pictureFrame.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 switch (event.getAction()) {
-                    case MotionEvent.ACTION_DOWN:
-                        // 記錄觸摸點與圖片左上角的偏移量
-                        offsetX = event.getX() - pictureView.getX();
-                        offsetY = event.getY() - pictureView.getY();
+                    case MotionEvent.ACTION_DOWN: // when click/press the camera -> start to drag
+                        CharSequence charSequence = (CharSequence) pictureFrame.getTag();
+                        ClipData.Item item = new ClipData.Item(charSequence);
+                        ClipData clipData = new ClipData(charSequence, new String[]{ClipDescription.MIMETYPE_TEXT_PLAIN}, item);
+                        View.DragShadowBuilder shadowBuilder = new View.DragShadowBuilder(pictureFrame);
+                        pictureFrame.startDragAndDrop(clipData, shadowBuilder, null, 0);
                         break;
-                    case MotionEvent.ACTION_MOVE:
-                        // 跟蹤手指移動，更新圖片位置
-                        pictureView.setX(event.getX() - offsetX);
-                        pictureView.setY(event.getY() - offsetY);
-                        break;
+                    default:
+                        return false;
                 }
                 return true;
+            }
+        });
+    }
+
+    private void setupLayoutOnDragListener(){
+        screenLayout.setOnDragListener(new View.OnDragListener() {
+            @Override
+            public boolean onDrag(View v, DragEvent event) {
+                switch (event.getAction()) {
+                    case DragEvent.ACTION_DRAG_STARTED: // start to drag camera
+                        pictureFrame.setVisibility(View.GONE); // let original camera disappear
+                        return true;
+                    case DragEvent.ACTION_DRAG_ENTERED: // camera in screen
+                        cameraInScreen = true;
+                        return true;
+                    case DragEvent.ACTION_DRAG_LOCATION: // dragging in the screen
+                        return true;
+                    case DragEvent.ACTION_DRAG_EXITED: // camera out of screen
+                        cameraInScreen = false;
+                        return true;
+                    case DragEvent.ACTION_DROP: // record the last x&y of camera (left corner)
+                        drag_x = event.getX();
+                        drag_y = event.getY();
+                        return true;
+                    case DragEvent.ACTION_DRAG_ENDED: // drag finish
+                        // make sure that the camera is not out of screen & drag success
+                        if (cameraInScreen && event.getResult()) { // put it down with camera's center
+                            int left = screenLayout.getLeft();
+                            int top = screenLayout.getTop();
+                            drag_x = drag_x + left - (pictureFrame.getWidth() / 2);
+                            drag_y = drag_y + top - (pictureFrame.getHeight() / 2);
+                            pictureFrame.setX(drag_x);
+                            pictureFrame.setY(drag_y);
+                        }
+                        pictureFrame.setVisibility(View.VISIBLE);
+                        return true;
+                }
+                return false;
             }
         });
     }
@@ -310,48 +362,6 @@ public class MainActivity extends AppCompatActivity {
 
 //        String model_return; -> I move this as global variable, so as to modify its value in another thread
 
-        if (is_sign_mode == Boolean.TRUE) {
-            // TODO: 接Sign mode model
-            Random random = new Random();
-
-// Generate a random number between 0 and 2 (inclusive)
-            int randomValue = random.nextInt(3);
-
-            switch (randomValue) {
-                case 0:
-                    model_return = "Hello";
-                    break;
-                case 1:
-                    model_return = "#";
-                    break;
-                case 2:
-                    model_return = "@my name is Emerald";
-                    break;
-                default:
-                    model_return = "@Hi"; // Default value in case of unexpected randomValue
-            }
-        } else {
-            // TODO: 接command mode model
-            Random random = new Random();
-
-// Generate a random number between 0 and 2 (inclusive)
-            int randomValue = random.nextInt(3);
-
-            switch (randomValue) {
-                case 0:
-                    model_return = "Hello";
-                    break;
-                case 1:
-                    model_return = "#";
-                    break;
-                case 2:
-                    model_return = "@my name is Emerald";
-                    break;
-                default:
-                    model_return = "@Hi";
-            }
-        }
-
         return_text_processing(model_return);
     }
 
@@ -372,13 +382,21 @@ public class MainActivity extends AppCompatActivity {
 
     private void return_text_processing(String new_text){
         LinearLayout command_icon = findViewById(R.id.command_icon);
+        ImageView restart_icon = findViewById(R.id.restart);
+        ImageView exit_icon = findViewById(R.id.exit);
+        ImageView delete_icon = findViewById(R.id.delete);
+        ImageView enter_icon = findViewById(R.id.send);
+
         if (new_text.length() > 0 && new_text.charAt(0) == '@') {
             // Check if the string is not empty and the first character is "@"
             new_text = new_text.substring(1); // Remove the first character
+
+            // append new sentence
             current_text = (current_text != null) ? current_text + " " + new_text : new_text;
 
             // Switch mode to command mode
             is_sign_mode = Boolean.FALSE;
+
             // To hide all icons
             command_icon.setVisibility(View.VISIBLE);
         }
@@ -388,20 +406,31 @@ public class MainActivity extends AppCompatActivity {
                 addStyledTextViewToLayout(linearLayout, current_text, true);
                 current_text = null;
             }
+            // lit up enter icon
+            button_lit_up(enter_icon);
         }
         else if(new_text.equals("$")){ // restart
             // switch mode to Sign mode
             current_text = null;
             is_sign_mode = Boolean.TRUE;
+
+            // lit up restart icon
+            button_lit_up(restart_icon);
+
             // To hide all icons
             command_icon.setVisibility(View.GONE);
         }
         else if(new_text.equals("%")){ // delete
             current_text = null;
+            // lit up delete icon
+            button_lit_up(delete_icon);
         }
         else if(new_text.equals("^")){ // exit
             current_text = null;
             // TODO: some function to close the camera texture
+
+            // lit up exit icon
+            button_lit_up(exit_icon);
 
             // To hide all icons
             command_icon.setVisibility(View.GONE);
@@ -412,11 +441,26 @@ public class MainActivity extends AppCompatActivity {
         else{ // regular text
             current_text = (current_text != null) ? current_text + new_text : new_text;
         }
+        // set current message
         TextView display_text = findViewById(R.id.display_text);
         display_text.setText(current_text);
 
+        // Chatroom update
         ScrollView scrollView = findViewById(R.id.scrollView);
         scrollView.fullScroll(View.FOCUS_DOWN);
+    }
+
+    private void button_lit_up(ImageView icon) {
+        icon.setBackgroundColor(R.drawable.button_bg);
+
+        // Use a Handler to dismiss the dialog after a short delay (e.g., 2 seconds)
+        Handler handler = new Handler();
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                icon.setBackgroundResource(0);
+            }
+        }, 1000); // 1000 milliseconds (2 seconds)
     }
 
     private void addStyledTextViewToLayout(LinearLayout layout, String text, boolean is_my_text) {
@@ -533,7 +577,15 @@ public class MainActivity extends AppCompatActivity {
         cameraDevice.createCaptureSession(sessionConfiguration);
 
         // show up camera image
-        pictureView.setVisibility(View.VISIBLE);
+        pictureFrame.setVisibility(View.VISIBLE);
+
+        // disable button of startCamera
+        Button startCameraButton = findViewById(R.id.startCamera);
+        startCameraButton.setVisibility(View.GONE);
+
+        // remove initial text
+        TextView displayText = findViewById(R.id.display_text);
+        displayText.setText("");
     }
 
     public void buttonStopCamera(View view) {
@@ -545,7 +597,15 @@ public class MainActivity extends AppCompatActivity {
 //        if (cameraDevice != null) cameraDevice.close(); // this will shut down the app, don't use it
 
         // turn off camera image
-        pictureView.setVisibility(View.GONE);
+        pictureFrame.setVisibility(View.GONE);
+
+        // disable button of startCamera
+        Button startCameraButton = findViewById(R.id.startCamera);
+        startCameraButton.setVisibility(View.VISIBLE);
+
+        // show initial text
+        TextView displayText = findViewById(R.id.display_text);
+        displayText.setText("Enter a message");
     }
 
 }
