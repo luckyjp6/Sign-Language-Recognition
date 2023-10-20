@@ -184,8 +184,8 @@ public class MainActivity extends AppCompatActivity {
                         break;
                     case MotionEvent.ACTION_MOVE:
                         // 跟蹤手指移動，更新圖片位置
-                        pictureView.setX(event.getX() + offsetX);
-                        pictureView.setY(event.getY() - offsetY);
+                        pictureFrame.setX(event.getX() - offsetX);
+                        pictureFrame.setY(event.getY() - offsetY);
                         break;
                 }
                 return true;
