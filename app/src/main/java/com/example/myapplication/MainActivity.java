@@ -6,9 +6,12 @@ import static java.lang.System.exit;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.app.ActivityCompat;
 import androidx.lifecycle.ViewModel;
 
+import android.content.ClipData;
+import android.content.ClipDescription;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
@@ -60,14 +63,13 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 import android.view.MotionEvent;
-import android.view.View;
-import android.widget.ImageView;
-import android.view.ViewGroup;
+
+import android.view.DragEvent;
 
 public class MainActivity extends AppCompatActivity {
     private ImageView pictureView;
     private FrameLayout pictureFrame;
-
+    private ConstraintLayout screenLayout;
     private CameraCaptureSession cameraCaptureSession_imageReader;
     private CameraManager cameraManager;
     private CameraDevice cameraDevice;
@@ -80,8 +82,8 @@ public class MainActivity extends AppCompatActivity {
     private Boolean is_sign_mode;
     private String current_text;
     private int skipCount = 0;
-
-    private float offsetX, offsetY;
+    private float drag_x, drag_y;
+    private Boolean cameraInScreen;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -108,6 +110,10 @@ public class MainActivity extends AppCompatActivity {
         pictureFrame = findViewById(R.id.picture_frame);
         pictureFrame.setVisibility(View.GONE);
         setupCameraTouchListener();
+
+        // Initialize  Screen, start Drag Listener
+        screenLayout = findViewById(R.id.screen_layout);
+        setupLayoutOnDragListener();
 
         // Init imageReader, start image listener
         initImageReader();
@@ -177,18 +183,55 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 switch (event.getAction()) {
-                    case MotionEvent.ACTION_DOWN:
-                        // 記錄觸摸點與圖片左上角的偏移量
-                        offsetX = event.getX() - pictureFrame.getX();
-                        offsetY = event.getY() - pictureFrame.getY();
+                    case MotionEvent.ACTION_DOWN: // when click/press the camera -> start to drag
+                        CharSequence charSequence = (CharSequence) pictureFrame.getTag();
+                        ClipData.Item item = new ClipData.Item(charSequence);
+                        ClipData clipData = new ClipData(charSequence, new String[]{ClipDescription.MIMETYPE_TEXT_PLAIN}, item);
+                        View.DragShadowBuilder shadowBuilder = new View.DragShadowBuilder(pictureFrame);
+                        pictureFrame.startDragAndDrop(clipData, shadowBuilder, null, 0);
                         break;
-                    case MotionEvent.ACTION_MOVE:
-                        // 跟蹤手指移動，更新圖片位置
-                        pictureFrame.setX(event.getX() - offsetX);
-                        pictureFrame.setY(event.getY() - offsetY);
-                        break;
+                    default:
+                        return false;
                 }
                 return true;
+            }
+        });
+    }
+
+    private void setupLayoutOnDragListener(){
+        screenLayout.setOnDragListener(new View.OnDragListener() {
+            @Override
+            public boolean onDrag(View v, DragEvent event) {
+                switch (event.getAction()) {
+                    case DragEvent.ACTION_DRAG_STARTED: // start to drag camera
+                        pictureFrame.setVisibility(View.GONE); // let original camera disappear
+                        return true;
+                    case DragEvent.ACTION_DRAG_ENTERED: // camera in screen
+                        cameraInScreen = true;
+                        return true;
+                    case DragEvent.ACTION_DRAG_LOCATION: // dragging in the screen
+                        return true;
+                    case DragEvent.ACTION_DRAG_EXITED: // camera out of screen
+                        cameraInScreen = false;
+                        return true;
+                    case DragEvent.ACTION_DROP: // record the last x&y of camera (left corner)
+                        drag_x = event.getX();
+                        drag_y = event.getY();
+                        return true;
+                    case DragEvent.ACTION_DRAG_ENDED: // drag finish
+                        // make sure that the camera is not out of screen & drag success
+                        if (cameraInScreen && event.getResult()) { // put it down with camera's center
+                            int left = screenLayout.getLeft();
+                            int top = screenLayout.getTop();
+                            drag_x = drag_x + left - (pictureFrame.getWidth() / 2);
+                            drag_y = drag_y + top - (pictureFrame.getHeight() / 2);
+                            pictureFrame.setX(drag_x);
+                            pictureFrame.setY(drag_y);
+                        }
+                        pictureFrame.setVisibility(View.VISIBLE);
+                        return true;
+                }
+                return false;
             }
         });
     }
