@@ -48,7 +48,13 @@ import com.chaquo.python.PyObject;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
+
+import android.view.MotionEvent;
+import android.view.View;
+import android.widget.ImageView;
+import android.view.ViewGroup;
 
 public class MainActivity extends AppCompatActivity {
     private ImageView pictureView;
@@ -63,6 +69,8 @@ public class MainActivity extends AppCompatActivity {
     private String model_return;
     private Boolean is_sign_mode;
     private String current_text;
+
+    private float offsetX, offsetY;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -84,6 +92,7 @@ public class MainActivity extends AppCompatActivity {
 
         // Initialize texture for camera
         pictureView = findViewById(R.id.picture);
+        setupCameraTouchListener();
 
         // Init imageReader, start image listener
         initImageReader();
@@ -230,6 +239,27 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void setupCameraTouchListener() {
+        pictureView.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        // 記錄觸摸點與圖片左上角的偏移量
+                        offsetX = event.getX() - pictureView.getX();
+                        offsetY = event.getY() - pictureView.getY();
+                        break;
+                    case MotionEvent.ACTION_MOVE:
+                        // 跟蹤手指移動，更新圖片位置
+                        pictureView.setX(event.getX() - offsetX);
+                        pictureView.setY(event.getY() - offsetY);
+                        break;
+                }
+                return true;
+            }
+        });
+    }
+    
     private void processCapturedImage() {
         // Get text result from AI module
         mThread requestThread = new mThread();
@@ -309,13 +339,16 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void return_text_processing(String new_text){
+        LinearLayout command_icon = findViewById(R.id.command_icon);
         if (new_text.length() > 0 && new_text.charAt(0) == '@') {
             // Check if the string is not empty and the first character is "@"
             new_text = new_text.substring(1); // Remove the first character
             current_text = (current_text != null) ? current_text + " " + new_text : new_text;
 
-            // Switch mode to function mode
+            // Switch mode to command mode
             is_sign_mode = Boolean.FALSE;
+            // To hide all icons
+            command_icon.setVisibility(View.VISIBLE);
         }
         else if(new_text.equals("#")){ // enter
             if (current_text != null) {
@@ -328,6 +361,8 @@ public class MainActivity extends AppCompatActivity {
             // switch mode to Sign mode
             current_text = null;
             is_sign_mode = Boolean.TRUE;
+            // To hide all icons
+            command_icon.setVisibility(View.GONE);
         }
         else if(new_text.equals("%")){ // delete
             current_text = null;
@@ -335,6 +370,9 @@ public class MainActivity extends AppCompatActivity {
         else if(new_text.equals("^")){ // exit
             current_text = null;
             // TODO: some function to close the camera texture
+
+            // To hide all icons
+            command_icon.setVisibility(View.GONE);
         }
         else if(new_text.equals("&")){ // empty value
 
@@ -345,6 +383,8 @@ public class MainActivity extends AppCompatActivity {
         TextView display_text = findViewById(R.id.display_text);
         display_text.setText(current_text);
 
+        ScrollView scrollView = findViewById(R.id.scrollView);
+        scrollView.fullScroll(View.FOCUS_DOWN);
     }
 
     private void addStyledTextViewToLayout(LinearLayout layout, String text, boolean is_my_text) {
@@ -386,7 +426,7 @@ public class MainActivity extends AppCompatActivity {
         textView.setBackgroundResource(backgroundResourceID);
         textView.setPadding(16, 8, 16, 8);
         textView.setText(text);
-        textView.setTextColor(Color.parseColor("#FFFFFF"));
+        textView.setTextColor(Color.parseColor(text_color));
         textView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
 
         return textView;
@@ -459,6 +499,9 @@ public class MainActivity extends AppCompatActivity {
                 }
         );
         cameraDevice.createCaptureSession(sessionConfiguration);
+
+        // show up camera image
+        pictureView.setVisibility(View.VISIBLE);
     }
 
     public void buttonStopCamera(View view) {
@@ -468,6 +511,9 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
 //        if (cameraDevice != null) cameraDevice.close(); // this will shut down the app, don't use it
+
+        // turn off camera image
+        pictureView.setVisibility(View.GONE);
     }
 
 }
