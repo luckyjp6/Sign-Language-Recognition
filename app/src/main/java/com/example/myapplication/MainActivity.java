@@ -14,7 +14,6 @@ import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.ImageFormat;
 import android.hardware.camera2.CameraAccessException;
-import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CaptureRequest;
@@ -28,12 +27,16 @@ import android.os.Bundle;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
-import android.view.TextureView;
 import android.view.View;
 
 import com.chaquo.python.Python;
 import com.chaquo.python.android.AndroidPlatform;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -42,30 +45,22 @@ import java.util.Random;
 
 import com.chaquo.python.PyObject;
 
-
-import android.os.ParcelFileDescriptor;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
 public class MainActivity extends AppCompatActivity {
-
-//    private TextureView textureView;
     private ImageView pictureView;
-    private CameraCaptureSession cameraCaptureSession;
     private CameraCaptureSession cameraCaptureSession_imageReader;
-    private String stringCameraID;
     private CameraManager cameraManager;
     private CameraDevice cameraDevice;
-    private CaptureRequest.Builder captureRequestBuilder;
     private CaptureRequest.Builder captureRequestBuilder_imgReader;
     private ImageReader imageReader;
-    private TextureView.SurfaceTextureListener surfaceTextureListener;
-    private static ParcelFileDescriptor[] img_pipe, text_pipe;
     private Python py;
-    private int frame_count = 0;
-    byte [][]frames;
+    private String threadInstruction;
+    byte [] frame;
+    private String model_return;
     private Boolean is_sign_mode;
     private String current_text;
 
@@ -74,8 +69,13 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        // Start socket thread
+        mThread initThread = new mThread();
+        threadInstruction = "init";
+        initThread.start();
+
         // Start Python
-        initPython();
+//        initPython();
 
         // Request camera permission
         ActivityCompat.requestPermissions(this,
@@ -89,21 +89,23 @@ public class MainActivity extends AppCompatActivity {
         initImageReader();
         setupImageReaderListener();
 
-        frames = new byte[20][];
 
         // Set camera manager
         cameraManager = (CameraManager) getSystemService(CAMERA_SERVICE);
         startCamera();
+
+        try {
+            initThread.join();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
     }
 
-    private void initPython() {
-        if (!Python.isStarted()) {
-            Python.start(new AndroidPlatform(this));
-        }
-        py = Python.getInstance();
-        PyObject sendFrameModule = py.getModule("Connect");
-        sendFrameModule.callAttr("init_slr");
-    }
+//    private void initPython() {
+//        if (!Python.isStarted()) {
+//            Python.start(new AndroidPlatform(this));
+//        }
+//    }
 
     private void initImageReader() {
         imageReader = ImageReader.newInstance(
@@ -124,39 +126,127 @@ public class MainActivity extends AppCompatActivity {
                 int length= buffer.remaining();
 
                 // Get image
-                byte[] bytes = new byte[length];
-                frames[frame_count] = new byte[length];
-                buffer.get(frames[frame_count]);
+                frame = new byte[length];
+                buffer.get(frame);
+
+                // Send image to AI module
+                mThread socketThread = new mThread();
+                socketThread.start();
 
                 image.close();
 
                 // Show preview
-                Bitmap bmp = BitmapFactory.decodeByteArray(frames[frame_count], 0, length);
+                Bitmap bmp = BitmapFactory.decodeByteArray(frame, 0, length);
                 ImageView displayPicture = findViewById(R.id.picture);
                 displayPicture.setImageBitmap(bmp);
-
-                frame_count++;
-                
-                // Send frames to AI module when 20 frames are collected
-                if (frame_count == 20) {
-                    frame_count = 0;
-                    processCapturedImage(reader, bytes);
-
-                //  Rotate image and show the preview
-//                     PyObject rotateModule = py.getModule("Rotation");
-//                     rotateModule.callAttr("rotation_func", frames);
-                }
             }
         }, null);
     }
 
-    private void processCapturedImage(ImageReader reader, byte[] bytes) {
-//      TODO: Add AI entry point here!!
-        PyObject sendFrameModule = py.getModule("Connect");
-        boolean sendResult = sendFrameModule.callAttr("send_frame", frames).toJava(boolean.class);
+    public class mThread extends Thread {
+        @Override
+        public void run() {
+            super.run();
 
-        String result = sendFrameModule.callAttr("get_text").toJava(String.class);
-        String model_return;
+            // Start socket
+            SocketClient socketClient = new SocketClient();
+
+            // Send request of frame
+            if (threadInstruction.isEmpty()) socketClient.send_frame();
+            else if (threadInstruction.equals("request")) {
+                socketClient.send_request();
+                threadInstruction = "";
+            }
+            else if (threadInstruction.equals("init")) {
+                socketClient.send_init();
+                threadInstruction = "";
+            }
+        }
+    }
+
+    public class SocketClient {
+        private Socket aiSever;
+        private PrintWriter printWriter;
+        private BufferedReader bufferedReader;
+
+        private void init () {
+            try {
+                aiSever = new Socket("140.113.141.90", 12345);
+                printWriter = new PrintWriter(aiSever.getOutputStream());
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        private void close() {
+            if (printWriter != null) printWriter.close();
+            if (bufferedReader != null) {
+                try {
+                    bufferedReader.close();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            if (aiSever != null) {
+                try {
+                    aiSever.close();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
+        public void send_init () {
+            init();
+
+            printWriter.write("init");
+            printWriter.flush();
+
+            close();
+        }
+        public void send_request() {
+            init();
+            printWriter.write("request");
+            printWriter.flush();
+
+            try {
+                bufferedReader = new BufferedReader(new InputStreamReader(aiSever.getInputStream()));
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+
+            try {
+                model_return = bufferedReader.readLine(); // read is also available, but it returns char[]
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+
+            close();
+        }
+        public void send_frame () {
+            init();
+            printWriter.write(Arrays.toString(frame));
+            printWriter.flush();
+
+            close();
+        }
+    }
+
+    private void processCapturedImage() {
+        // Get text result from AI module
+        mThread requestThread = new mThread();
+        threadInstruction = "request";
+        requestThread.start();
+
+        // Wait for the result
+        try {
+            requestThread.join();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
+//        PyObject sendFrameModule = py.getModule("Connect");
+//        String result = sendFrameModule.callAttr("get_text").toJava(String.class);
+
+//        String model_return; -> I move this as global variable, so as to modify its value in another thread
 
         if (is_sign_mode == Boolean.TRUE) {
             // TODO: 接Sign mode model
@@ -227,26 +317,26 @@ public class MainActivity extends AppCompatActivity {
             // Switch mode to function mode
             is_sign_mode = Boolean.FALSE;
         }
-        else if(new_text == "#"){ // enter
+        else if(new_text.equals("#")){ // enter
             if (current_text != null) {
                 LinearLayout linearLayout = findViewById(R.id.convo);
                 addStyledTextViewToLayout(linearLayout, current_text, true);
                 current_text = null;
             }
         }
-        else if(new_text == "$"){ // restart
+        else if(new_text.equals("$")){ // restart
             // switch mode to Sign mode
             current_text = null;
             is_sign_mode = Boolean.TRUE;
         }
-        else if(new_text == "%"){ // delete
+        else if(new_text.equals("%")){ // delete
             current_text = null;
         }
-        else if(new_text == "^"){ // exit
+        else if(new_text.equals("^")){ // exit
             current_text = null;
             // TODO: some function to close the camera texture
         }
-        else if(new_text == "&"){ // empty value
+        else if(new_text.equals("&")){ // empty value
 
         }
         else{ // regular text
@@ -303,7 +393,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    private CameraDevice.StateCallback stateCallback = new CameraDevice.StateCallback() {
+    private final CameraDevice.StateCallback stateCallback = new CameraDevice.StateCallback() {
         @Override
         public void onOpened(@NonNull CameraDevice camera) {
             cameraDevice = camera;
@@ -323,15 +413,10 @@ public class MainActivity extends AppCompatActivity {
 
     private void startCamera() {
         try {
-            stringCameraID = cameraManager.getCameraIdList()[1];
-            ImageView displayPicture = findViewById(R.id.picture);
+            String stringCameraID = cameraManager.getCameraIdList()[1];
 
             if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
                 ActivityCompat.requestPermissions(this, new String[]{CAMERA}, 1);
-                // TODO:  public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                //                                          int[] grantResults)
-                // to handle the case where the user grants the permission. See the documentation
-                // for ActivityCompat#requestPermissions for more details.
                 return;
             }
             cameraManager.openCamera(stringCameraID, stateCallback, null);
@@ -355,19 +440,9 @@ public class MainActivity extends AppCompatActivity {
                 new CameraCaptureSession.StateCallback() {
                     @Override
                     public void onConfigured(@NonNull CameraCaptureSession session) {
-                        if (session == null) return;
                         cameraCaptureSession_imageReader = session;
-                        try {
-                            CameraCharacteristics characteristics = cameraManager.getCameraCharacteristics(cameraManager.getCameraIdList()[1]);
+                        captureRequestBuilder_imgReader.set(CaptureRequest.JPEG_ORIENTATION, 0);
 
-//                            Activity activity= getActivity();
-                            captureRequestBuilder_imgReader.set(
-                                    CaptureRequest.JPEG_ORIENTATION,
-                                    getJpegOrientation(characteristics, 180)
-                            );
-                        } catch (CameraAccessException e) {
-                            throw new RuntimeException(e);
-                        }
                         captureRequestBuilder_imgReader.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_START);
 
                         try {
@@ -375,7 +450,6 @@ public class MainActivity extends AppCompatActivity {
                         } catch (CameraAccessException e) {
                             e.printStackTrace();
                         }
-//                        unlockFocus();
                     }
 
                     @Override
@@ -387,31 +461,12 @@ public class MainActivity extends AppCompatActivity {
         cameraDevice.createCaptureSession(sessionConfiguration);
     }
 
-    private int getJpegOrientation(CameraCharacteristics c, int deviceOrientation) {
-        if (deviceOrientation == android.view.OrientationEventListener.ORIENTATION_UNKNOWN) return 0;
-        int sensorOrientation = c.get(CameraCharacteristics.SENSOR_ORIENTATION);
-
-        // Round device orientation to a multiple of 90
-        deviceOrientation = (deviceOrientation + 45) / 90 * 90;
-
-        // Reverse device orientation for front-facing cameras
-        boolean facingFront = c.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT;
-        if (facingFront) deviceOrientation = -deviceOrientation;
-
-        // Calculate desired JPEG orientation relative to camera orientation to make
-        // the image upright relative to the device orientation
-        int jpegOrientation = (sensorOrientation + deviceOrientation + 360) % 360;
-
-        return jpegOrientation;
-    }
-
     public void buttonStopCamera(View view) {
         try {
             if (cameraCaptureSession_imageReader != null) cameraCaptureSession_imageReader.abortCaptures();
         } catch (Exception e) {
-//            e.printStackTrace();
+            e.printStackTrace();
         }
-        if (cameraCaptureSession != null) cameraCaptureSession.close();
 //        if (cameraDevice != null) cameraDevice.close(); // this will shut down the app, don't use it
     }
 
