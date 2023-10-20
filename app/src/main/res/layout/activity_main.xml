@@ -47,6 +47,47 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
+    <LinearLayout
+        android:id="@+id/command_icon"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:paddingBottom="8dp"
+        app:layout_constraintBottom_toTopOf="@+id/display_text">
+
+        <ImageView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:src="@drawable/restart"
+            android:contentDescription="Icon 1"
+            android:layout_gravity="center"/>
+
+        <ImageView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:src="@drawable/exit"
+            android:contentDescription="Icon 2"
+            android:layout_gravity="center"/>
+
+        <ImageView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:src="@drawable/delete"
+            android:contentDescription="Icon 3"
+            android:layout_gravity="center"/>
+
+        <ImageView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:src="@drawable/send"
+            android:contentDescription="Icon 4"
+            android:layout_gravity="center"/>
+    </LinearLayout>
 
     <ScrollView
         android:id="@+id/scrollView"

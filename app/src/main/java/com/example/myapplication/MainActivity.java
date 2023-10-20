@@ -234,13 +234,16 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void return_text_processing(String new_text){
+        LinearLayout command_icon = findViewById(R.id.command_icon);
         if (new_text.length() > 0 && new_text.charAt(0) == '@') {
             // Check if the string is not empty and the first character is "@"
             new_text = new_text.substring(1); // Remove the first character
             current_text = (current_text != null) ? current_text + " " + new_text : new_text;
 
-            // Switch mode to function mode
+            // Switch mode to command mode
             is_sign_mode = Boolean.FALSE;
+            // To hide all icons
+            command_icon.setVisibility(View.VISIBLE);
         }
         else if(new_text == "#"){ // enter
             if (current_text != null) {
@@ -253,6 +256,8 @@ public class MainActivity extends AppCompatActivity {
             // switch mode to Sign mode
             current_text = null;
             is_sign_mode = Boolean.TRUE;
+            // To hide all icons
+            command_icon.setVisibility(View.GONE);
         }
         else if(new_text == "%"){ // delete
             current_text = null;
@@ -260,6 +265,9 @@ public class MainActivity extends AppCompatActivity {
         else if(new_text == "^"){ // exit
             current_text = null;
             // TODO: some function to close the camera texture
+
+            // To hide all icons
+            command_icon.setVisibility(View.GONE);
         }
         else if(new_text == "&"){ // empty value
 
