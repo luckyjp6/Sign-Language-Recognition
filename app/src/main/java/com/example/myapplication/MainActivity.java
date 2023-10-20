@@ -214,7 +214,7 @@ public class MainActivity extends AppCompatActivity {
 
         private void init () {
             try {
-                aiSever = new Socket("140.113.141.90", 23456);
+                aiSever = new Socket("140.113.141.90", 12345);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
