@@ -514,7 +514,7 @@ public class MainActivity extends AppCompatActivity {
                     public void onConfigured(@NonNull CameraCaptureSession session) {
                         cameraCaptureSession_imageReader = session;
 //                        captureRequestBuilder_imgReader.set(CaptureRequest.JPEG_ORIENTATION, 0);
-//                        captureRequestBuilder_imgReader.set(CaptureRequest.JPEG_QUALITY, (byte) 40);
+                        captureRequestBuilder_imgReader.set(CaptureRequest.JPEG_QUALITY, (byte) 30);
                         captureRequestBuilder_imgReader.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_START);
 
                         try {

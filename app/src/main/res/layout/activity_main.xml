@@ -111,10 +111,10 @@
     <ImageView
         android:id="@+id/picture"
         android:layout_width="5dp"
-        android:layout_height="50dp"
+        android:layout_height="5dp"
         android:rotation="270"
-        android:scaleX="60"
-        android:scaleY="60"
+        android:scaleX="70"
+        android:scaleY="70"
         android:visibility="visible"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
