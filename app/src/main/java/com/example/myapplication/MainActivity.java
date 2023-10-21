@@ -377,75 +377,73 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    private void return_text_processing(String new_text){
-        LinearLayout command_icon = findViewById(R.id.command_icon);
-        ImageView restart_icon = findViewById(R.id.restart);
-        ImageView exit_icon = findViewById(R.id.exit);
-        ImageView delete_icon = findViewById(R.id.delete);
-        ImageView enter_icon = findViewById(R.id.send);
+    private void return_text_processing(String newText) {
+        // Find views
+        LinearLayout commandIcon = findViewById(R.id.command_icon);
+        ImageView restartIcon = findViewById(R.id.restart);
+        ImageView exitIcon = findViewById(R.id.exit);
+        ImageView deleteIcon = findViewById(R.id.delete);
+        ImageView enterIcon = findViewById(R.id.send);
+        LinearLayout linearLayout = findViewById(R.id.convo);
+        TextView displayText = findViewById(R.id.display_text);
+        ScrollView scrollView = findViewById(R.id.scrollView);
 
-        if (new_text.length() > 0 && new_text.charAt(0) == '@') {
-            // Check if the string is not empty and the first character is "@"
-            new_text = new_text.substring(1); // Remove the first character
-
-            // append new sentence
-            current_text = (current_text != null) ? current_text + " " + new_text : new_text;
-
-            // Switch mode to command mode
-            is_sign_mode = Boolean.FALSE;
-
-            // To hide all icons
-            command_icon.setVisibility(View.VISIBLE);
+        if (newText.isEmpty()) {
+            // Handle empty input
+            return;
         }
-        else if(new_text.equals("#")){ // enter
-            if (current_text != null) {
-                LinearLayout linearLayout = findViewById(R.id.convo);
-                addStyledTextViewToLayout(linearLayout, current_text, true);
+
+        // Check for command symbols
+        switch (newText.charAt(0)) {
+            case '@':
+                // Command mode
+                newText = newText.substring(1); // Remove the first character
+                current_text = (current_text != null) ? current_text + " " + newText : newText;
+                is_sign_mode = false;
+                commandIcon.setVisibility(View.VISIBLE);
+                break;
+            case '#':
+                // Enter
+                if (current_text != null) {
+                    addStyledTextViewToLayout(linearLayout, current_text, true);
+                    current_text = null;
+                }
+                button_lit_up(enterIcon);
+                break;
+            case '$':
+                // Restart
                 current_text = null;
-            }
-            // lit up enter icon
-            button_lit_up(enter_icon);
+                is_sign_mode = true;
+                button_lit_up(restartIcon);
+                commandIcon.setVisibility(View.GONE);
+                break;
+            case '%':
+                // Delete
+                current_text = null;
+                button_lit_up(deleteIcon);
+                break;
+            case '^':
+                // Exit
+                current_text = null;
+                // TODO: some function to close the camera texture
+                button_lit_up(exitIcon);
+                commandIcon.setVisibility(View.GONE);
+                break;
+            case '&':
+                // Empty value
+                break;
+            default:
+                // Regular text
+                current_text = (current_text != null) ? current_text + newText : newText;
         }
-        else if(new_text.equals("$")){ // restart
-            // switch mode to Sign mode
-            current_text = null;
-            is_sign_mode = Boolean.TRUE;
 
-            // lit up restart icon
-            button_lit_up(restart_icon);
-
-            // To hide all icons
-            command_icon.setVisibility(View.GONE);
-        }
-        else if(new_text.equals("%")){ // delete
-            current_text = null;
-            // lit up delete icon
-            button_lit_up(delete_icon);
-        }
-        else if(new_text.equals("^")){ // exit
-            current_text = null;
-            // TODO: some function to close the camera texture
-
-            // lit up exit icon
-            button_lit_up(exit_icon);
-
-            // To hide all icons
-            command_icon.setVisibility(View.GONE);
-        }
-        else if(new_text.equals("&")){ // empty value
-
-        }
-        else{ // regular text
-            current_text = (current_text != null) ? current_text + new_text : new_text;
-        }
-        // set current message
-        TextView display_text = findViewById(R.id.display_text);
-        display_text.setText(current_text);
+        // Set current message
+        displayText.setText(current_text);
 
         // Chatroom update
-        ScrollView scrollView = findViewById(R.id.scrollView);
         scrollView.fullScroll(View.FOCUS_DOWN);
     }
+
 
     private void button_lit_up(ImageView icon) {
         icon.setBackgroundColor(R.drawable.button_bg);
