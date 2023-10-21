@@ -384,7 +384,7 @@ public class MainActivity extends AppCompatActivity {
             new_text = new_text.substring(1); // Remove the first character
 
             // append new sentence
-            current_text = (current_text != null) ? current_text + " " + new_text : new_text;
+            current_text = new_text;
 
             // Switch mode to command mode
             is_sign_mode = Boolean.FALSE;
@@ -412,13 +412,6 @@ public class MainActivity extends AppCompatActivity {
             // To hide all icons
             command_icon.setVisibility(View.GONE);
 
-            // camera restart
-            try {
-                buttonStartCamera(null);
-            } catch (CameraAccessException e) {
-                e.printStackTrace();
-                // Handle the exception here if needed
-            }
         }
         else if(new_text.equals("%")){ // delete
             current_text = null;
