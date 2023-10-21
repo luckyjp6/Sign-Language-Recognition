@@ -351,7 +351,7 @@ public class MainActivity extends AppCompatActivity {
 
 //            OutputStream outputStream;
             try {
-//                outputStream = aiSever.getOutputStream();
+                // outputStream = aiSever.getOutputStream();
                 outputStream.write("init".getBytes());
                 outputStream.flush();
             } catch (IOException e) {
@@ -364,7 +364,7 @@ public class MainActivity extends AppCompatActivity {
             // Send request to server
             init();
             try {
-                outputStream = aiSever.getOutputStream();
+                // outputStream = aiSever.getOutputStream();
                 if (is_sign_mode) outputStream.write("request_sign_mode".getBytes());
                 else outputStream.write("request".getBytes());
                 outputStream.flush();
@@ -417,6 +417,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void processCapturedImage() {
 //        Log.d("model return", model_return);
+        if (model_return == null) return;
         return_text_processing(model_return);
     }
 
@@ -447,7 +448,7 @@ public class MainActivity extends AppCompatActivity {
             new_text = new_text.substring(1); // Remove the first character
 
             // append new sentence
-            current_text = (current_text != null) ? current_text + " " + new_text : new_text;
+            current_text = new_text;
 
             // Switch mode to command mode
             is_sign_mode = Boolean.FALSE;
@@ -474,6 +475,7 @@ public class MainActivity extends AppCompatActivity {
 
             // To hide all icons
             command_icon.setVisibility(View.GONE);
+
         }
         else if(new_text.equals("%")){ // delete
             current_text = null;
@@ -482,16 +484,14 @@ public class MainActivity extends AppCompatActivity {
         }
         else if(new_text.equals("^")){ // exit
             current_text = null;
-            // TODO: some function to close the camera texture
 
             // lit up exit icon
             button_lit_up(exit_icon);
 
             // To hide all icons
             command_icon.setVisibility(View.GONE);
-        }
-        else if(new_text.equals("&")){ // empty value
 
+            buttonStopCamera(null);
         }
         else{ // regular text
             current_text = (current_text != null) ? current_text + new_text : new_text;
