@@ -353,7 +353,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void processCapturedImage() {
 //        Log.d("model return", model_return);
-        if (model_return == null) model_return = "";
+        if (model_return == null) return;
         return_text_processing(model_return);
     }
 
@@ -426,9 +426,6 @@ public class MainActivity extends AppCompatActivity {
 
             // To hide all icons
             command_icon.setVisibility(View.GONE);
-        }
-        else if(new_text.equals("&")){ // empty value
-
         }
         else{ // regular text
             current_text = (current_text != null) ? current_text + new_text : new_text;
