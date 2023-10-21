@@ -351,7 +351,7 @@ public class MainActivity extends AppCompatActivity {
 
 //            OutputStream outputStream;
             try {
-//                outputStream = aiSever.getOutputStream();
+                // outputStream = aiSever.getOutputStream();
                 outputStream.write("init".getBytes());
                 outputStream.flush();
             } catch (IOException e) {
@@ -364,7 +364,7 @@ public class MainActivity extends AppCompatActivity {
             // Send request to server
             init();
             try {
-                outputStream = aiSever.getOutputStream();
+                // outputStream = aiSever.getOutputStream();
                 if (is_sign_mode) outputStream.write("request_sign_mode".getBytes());
                 else outputStream.write("request".getBytes());
                 outputStream.flush();
@@ -417,6 +417,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void processCapturedImage() {
 //        Log.d("model return", model_return);
+        if (model_return == null) return;
         return_text_processing(model_return);
     }
 
