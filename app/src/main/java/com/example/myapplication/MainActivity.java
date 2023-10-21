@@ -205,7 +205,7 @@ public class MainActivity extends AppCompatActivity {
                         }
 //                    }
 //                    exit(0);
-//                        processCapturedImage();
+                        processCapturedImage();
                     }
                 }
 
@@ -376,6 +376,7 @@ public class MainActivity extends AppCompatActivity {
             try {
                 bufferedReader = new BufferedReader(new InputStreamReader(aiSever.getInputStream()));
                 model_return = bufferedReader.readLine(); // read is also available, but it returns char[]
+                if (model_return == null) model_return = "";
                 Log.d("############model return", model_return);
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -435,7 +436,6 @@ public class MainActivity extends AppCompatActivity {
 
     private void processCapturedImage() {
 //        Log.d("model return", model_return);
-        if (model_return == null) model_return = "";
         return_text_processing(model_return);
     }
 
@@ -633,8 +633,8 @@ public class MainActivity extends AppCompatActivity {
                         cameraCaptureSession_imageReader = session;
 //                        captureRequestBuilder_imgReader.set(CaptureRequest.JPEG_ORIENTATION, 0);
                         captureRequestBuilder_imgReader.set(CaptureRequest.JPEG_QUALITY, (byte) 80);
-//                        captureRequestBuilder_imgReader.set(CaptureRequest.SENSOR_EXPOSURE_TIME, (long)1);
-                        captureRequestBuilder_imgReader.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, CameraMetadata.CONTROL_AF_TRIGGER_START);
+                        captureRequestBuilder_imgReader.set(CaptureRequest.SENSOR_EXPOSURE_TIME, (long)1);
+                        captureRequestBuilder_imgReader.set(CaptureRequest.CONTROL_AE_ANTIBANDING_MODE, CameraMetadata.CONTROL_AF_TRIGGER_START);
 
                         try {
                             cameraCaptureSession_imageReader.setRepeatingRequest(captureRequestBuilder_imgReader.build(), null, null);
