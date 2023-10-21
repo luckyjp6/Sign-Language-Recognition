@@ -306,7 +306,8 @@ public class MainActivity extends AppCompatActivity {
             OutputStream outputStream;
             try {
                 outputStream = aiSever.getOutputStream();
-                outputStream.write("request".getBytes());
+                if (is_sign_mode) outputStream.write("request".getBytes());
+                else outputStream.write("request".getBytes());
                 outputStream.flush();
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -343,6 +344,7 @@ public class MainActivity extends AppCompatActivity {
 
             if (skipCount == 50) {
                 send_request();
+                skipCount = 0;
             }
 
             close();
