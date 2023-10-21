@@ -266,7 +266,7 @@ public class MainActivity extends AppCompatActivity {
 
         private void init () {
             try {
-                aiSever = new Socket("140.113.141.90", 12345);
+                aiSever = new Socket("140.113.141.90", 23456);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -411,6 +411,14 @@ public class MainActivity extends AppCompatActivity {
 
             // To hide all icons
             command_icon.setVisibility(View.GONE);
+
+            // camera restart
+            try {
+                buttonStartCamera(null);
+            } catch (CameraAccessException e) {
+                e.printStackTrace();
+                // Handle the exception here if needed
+            }
         }
         else if(new_text.equals("%")){ // delete
             current_text = null;
@@ -419,13 +427,14 @@ public class MainActivity extends AppCompatActivity {
         }
         else if(new_text.equals("^")){ // exit
             current_text = null;
-            // TODO: some function to close the camera texture
 
             // lit up exit icon
             button_lit_up(exit_icon);
 
             // To hide all icons
             command_icon.setVisibility(View.GONE);
+
+            buttonStopCamera(null);
         }
         else{ // regular text
             current_text = (current_text != null) ? current_text + new_text : new_text;
