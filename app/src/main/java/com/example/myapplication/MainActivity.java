@@ -363,13 +363,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void processCapturedImage() {
-
-        // Wait for the result
-        try {
-            requestThread.join();
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
         return_text_processing(model_return);
     }
 
