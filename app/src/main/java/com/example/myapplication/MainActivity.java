@@ -66,6 +66,10 @@ import android.view.MotionEvent;
 
 import android.view.DragEvent;
 
+//DqeueArray
+import com.example.myapplication.FrameQueue;
+import com.example.myapplication.ModelReturnQueue;
+
 public class MainActivity extends AppCompatActivity {
     private ImageView pictureView;
     private FrameLayout pictureFrame;
@@ -85,6 +89,9 @@ public class MainActivity extends AppCompatActivity {
     private int skipCount = 0;
     private float drag_x, drag_y;
     private Boolean cameraInScreen;
+    private FrameQueue frameQueue;
+    private ModelReturnQueue modelReturnQueue;
+    private Boolean CameraOn;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -130,6 +137,8 @@ public class MainActivity extends AppCompatActivity {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
+        frameQueue = new FrameQueue();
+
     }
 
 //    private void initPython() {
@@ -169,11 +178,11 @@ public class MainActivity extends AppCompatActivity {
 //
                 if (skipCount % 10 == 0) {
                     // Send image to AI module
-                    mThread socketThread = new mThread();
-                    socketThread.start();
-                    if (skipCount % 50 == 0) processCapturedImage();
+                    frameQueue.enqueue(buffer);
+//                    mThread socketThread = new mThread();
+//                    socketThread.start();
+                    if (frameQueue.isTimeToSendRequest()) processCapturedImage();
                 }
-
                 image.close();
 
             }
@@ -247,26 +256,37 @@ public class MainActivity extends AppCompatActivity {
             SocketClient socketClient = new SocketClient();
 
             // Send request of frame
-            if (threadInstruction.isEmpty()) socketClient.send_frame();
-            else if (threadInstruction.equals("request")) {
-                socketClient.send_request();
-                threadInstruction = "";
+            if (threadInstruction.isEmpty()){
+                while(true){
+                    socketClient.send_frame();
+                    if(frameQueue.isTimeToSendRequest()){
+                        socketClient.send_request();
+
+                    }
+
+                    // if buttonStop is on click stop the thread
+                    if(!CameraOn){
+                        socketClient.close();
+                        return;
+                    }
+                }
             }
             else if (threadInstruction.equals("init")) {
                 socketClient.send_init();
                 threadInstruction = "";
             }
+
         }
     }
 
     public class SocketClient {
         private Socket aiSever;
-//        private PrintWriter printWriter;
+        //        private PrintWriter printWriter;
         private BufferedReader bufferedReader;
 
         private void init () {
             try {
-                aiSever = new Socket("140.113.141.90", 12345);
+                aiSever = new Socket("140.113.141.90", 23456);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -320,30 +340,39 @@ public class MainActivity extends AppCompatActivity {
 
             try {
                 model_return = bufferedReader.readLine(); // read is also available, but it returns char[]
+                modelReturnQueue.enqueue(model_return);
+
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
 
-            close();
+//            close();
         }
         public void send_frame () {
             init();
 //            Log.d("length", Integer.toString(frame.length));
             OutputStream outputStream;
-            try {
+            ByteBuffer sendFrameByteBuffer =  frameQueue.dequeue();
+            byte[] sendFrame = new byte[sendFrameByteBuffer.remaining()];
+            sendFrameByteBuffer.get(sendFrame);
 
+            try {
                 outputStream = aiSever.getOutputStream();
-                outputStream.write(Integer.toString(frame.length).getBytes());
-                outputStream.write(frame);
+                outputStream.write(Integer.toString(sendFrame.length).getBytes());
+                outputStream.write(sendFrame);
+
+//                outputStream = aiSever.getOutputStream();
+//                outputStream.write(Integer.toString(frame.length).getBytes());
+//                outputStream.write(frame);
 //                bmp.compress(Bitmap.CompressFormat.JPEG, 50, outputStream);
                 outputStream.flush();
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
 
-            if (skipCount == 50) {
-                send_request();
-            }
+//            if (skipCount == 50) {
+//                send_request();
+//            }
 
             close();
         }
@@ -518,6 +547,7 @@ public class MainActivity extends AppCompatActivity {
     };
 
     private void startCamera() {
+
         try {
             String stringCameraID = cameraManager.getCameraIdList()[1];
 
@@ -532,6 +562,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void buttonStartCamera(View view) throws CameraAccessException {
+        CameraOn = Boolean.TRUE;
+
         try {
             captureRequestBuilder_imgReader = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
         } catch (CameraAccessException e) {
@@ -577,9 +609,14 @@ public class MainActivity extends AppCompatActivity {
         // remove initial text
         TextView displayText = findViewById(R.id.display_text);
         displayText.setText("");
+
+        //start the socket thread
+        mThread SocketThread = new mThread();
+        SocketThread.start();
     }
 
     public void buttonStopCamera(View view) {
+        CameraOn = Boolean.FALSE;
         try {
             if (cameraCaptureSession_imageReader != null) cameraCaptureSession_imageReader.abortCaptures();
         } catch (Exception e) {

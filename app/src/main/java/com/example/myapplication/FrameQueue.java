@@ -12,7 +12,7 @@ public class FrameQueue {
         bufferQueue.add(buffer);
         notify();
     }
-    public synchronized ByteBuffer dequeue() {giy
+    public synchronized ByteBuffer dequeue() {
         while (bufferQueue.isEmpty()) {
             try {
                 // 如果队列为空，等待数据的到来
