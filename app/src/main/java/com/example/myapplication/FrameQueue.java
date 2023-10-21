@@ -29,7 +29,7 @@ public class FrameQueue {
                 Thread.currentThread().interrupt();
             }
         }
-        sent = sent+1 % whenToSendRequest;
+        sent = (sent+1) % whenToSendRequest;
         return bufferQueue.poll();
     }
     public boolean isTimeToSendRequest(){

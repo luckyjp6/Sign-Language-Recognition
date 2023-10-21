@@ -176,7 +176,7 @@ public class MainActivity extends AppCompatActivity {
 
                 skipCount++;
 //
-                if (skipCount % 10 == 0) {
+                if (skipCount % 3 == 0) {
                     // Send image to AI module
                     frameQueue.enqueue(frame);
 //                    mThread socketThread = new mThread();
@@ -341,7 +341,9 @@ public class MainActivity extends AppCompatActivity {
 
             try {
                 model_return = bufferedReader.readLine(); // read is also available, but it returns char[]
-                modelReturnQueue.enqueue(model_return);
+                if (model_return != null) {
+                    modelReturnQueue.enqueue(model_return);
+                }
 
             } catch (IOException e) {
                 throw new RuntimeException(e);
