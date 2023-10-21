@@ -4,9 +4,14 @@ import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 
 public class FrameQueue {
-    private ArrayDeque<ByteBuffer> bufferQueue = new ArrayDeque<>();
+    private ArrayDeque<ByteBuffer> bufferQueue;
     private int sent = 1;
     private int whenToSendRequest = 10;
+
+    FrameQueue(){
+        bufferQueue = new ArrayDeque<>();
+    }
+
     public synchronized void enqueue(ByteBuffer buffer) {
 //        ByteBuffer buffer = ByteBuffer.wrap(data);
         bufferQueue.add(buffer);

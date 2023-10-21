@@ -5,6 +5,9 @@ import java.util.ArrayDeque;
 
 public class ModelReturnQueue {
     private ArrayDeque<String> bufferQueue;
+    ModelReturnQueue(){
+        bufferQueue = new ArrayDeque<>();
+    }
 
     public synchronized void enqueue(String input){
         bufferQueue.add(input);
