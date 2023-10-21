@@ -11,14 +11,14 @@
         android:id="@+id/send_test"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:src="@drawable/send"
-        android:onClick="send_test_message"
-        android:text="good night!!"
-        android:contentDescription="Icon 4"
         android:layout_gravity="center"
+        android:layout_weight="1"
+        android:contentDescription="Icon 4"
+        android:onClick="send_test_message"
+        android:src="@drawable/send"
+        android:text="good night!!"
         app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintTop_toTopOf="parent"/>
+        app:layout_constraintTop_toTopOf="parent" />
 
     <Button
         android:id="@+id/startCamera"
@@ -38,9 +38,9 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_centerInParent="true"
-        android:layout_marginBottom="16dp"
         android:layout_marginStart="10dp"
         android:layout_marginEnd="10dp"
+        android:layout_marginBottom="16dp"
         android:background="@drawable/my_input_bg"
         android:paddingStart="20dp"
         android:paddingTop="8dp"
@@ -55,60 +55,62 @@
 
     <LinearLayout
         android:id="@+id/command_icon"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="40dp"
-        android:orientation="horizontal"
         android:gravity="center"
+        android:orientation="horizontal"
         android:paddingBottom="8dp"
-        app:layout_constraintBottom_toTopOf="@+id/display_text">
+        app:layout_constraintBottom_toTopOf="@+id/display_text"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
 
         <ImageButton
             android:id="@+id/restart"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
-            android:scaleType="fitCenter"
+            android:layout_width="25dp"
+            android:layout_height="25dp"
+            android:layout_gravity="center"
             android:layout_weight="1"
-            android:src="@drawable/restart"
             android:background="@android:color/transparent"
-            android:onClick="cmd_restart"
             android:contentDescription="Icon 1"
-            android:layout_gravity="center"/>
+            android:onClick="cmd_restart"
+            android:scaleType="fitCenter"
+            android:src="@drawable/restart" />
 
         <ImageButton
             android:id="@+id/exit"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
-            android:scaleType="fitCenter"
+            android:layout_width="25dp"
+            android:layout_height="25dp"
+            android:layout_gravity="center"
             android:layout_weight="1"
-            android:src="@drawable/exit"
             android:background="@android:color/transparent"
-            android:onClick="cmd_exit"
             android:contentDescription="Icon 2"
-            android:layout_gravity="center"/>
+            android:onClick="cmd_exit"
+            android:scaleType="fitCenter"
+            android:src="@drawable/exit" />
 
         <ImageButton
             android:id="@+id/delete"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
-            android:scaleType="fitCenter"
+            android:layout_width="25dp"
+            android:layout_height="25dp"
+            android:layout_gravity="center"
             android:layout_weight="1"
-            android:src="@drawable/delete"
             android:background="@android:color/transparent"
-            android:onClick="cmd_delete"
             android:contentDescription="Icon 3"
-            android:layout_gravity="center"/>
+            android:onClick="cmd_delete"
+            android:scaleType="fitCenter"
+            android:src="@drawable/delete" />
 
         <ImageButton
             android:id="@+id/send"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
-            android:scaleType="fitCenter"
+            android:layout_width="25dp"
+            android:layout_height="25dp"
+            android:layout_gravity="center"
             android:layout_weight="1"
-            android:src="@drawable/send"
             android:background="@android:color/transparent"
-            android:onClick="cmd_enter"
             android:contentDescription="Icon 4"
-            android:layout_gravity="center"/>
+            android:onClick="cmd_enter"
+            android:scaleType="fitCenter"
+            android:src="@drawable/send" />
     </LinearLayout>
 
     <ScrollView

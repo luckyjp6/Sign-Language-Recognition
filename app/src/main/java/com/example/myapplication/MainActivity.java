@@ -661,19 +661,18 @@ public class MainActivity extends AppCompatActivity {
     public void cmd_exit(View view) {
         LinearLayout command_icon = findViewById(R.id.command_icon);
         ImageView exit_icon = findViewById(R.id.exit);
-        current_text = null;
 
         // lit up exit icon
         button_lit_up(exit_icon);
+
+        // set current message
+        TextView display_text = findViewById(R.id.display_text);
+        display_text.setText(current_text);
 
         // To hide all icons
         // command_icon.setVisibility(View.GONE);
 
         buttonStopCamera(null);
-
-        // set current message
-        TextView display_text = findViewById(R.id.display_text);
-        display_text.setText(current_text);
     }
 
     public void cmd_delete(View view) {
