@@ -435,74 +435,6 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    private void return_text_processing(String new_text){
-        LinearLayout command_icon = findViewById(R.id.command_icon);
-        ImageView restart_icon = findViewById(R.id.restart);
-        ImageView exit_icon = findViewById(R.id.exit);
-        ImageView delete_icon = findViewById(R.id.delete);
-        ImageView enter_icon = findViewById(R.id.send);
-
-        if (new_text.length() > 0 && new_text.charAt(0) == '@') {
-            // Check if the string is not empty and the first character is "@"
-            new_text = new_text.substring(1); // Remove the first character
-
-            // append new sentence
-            current_text = new_text;
-
-            // Switch mode to command mode
-            is_sign_mode = Boolean.FALSE;
-
-            // To hide all icons
-            command_icon.setVisibility(View.VISIBLE);
-        }
-        else if(new_text.equals("#")){ // enter
-            if (current_text != null) {
-                LinearLayout linearLayout = findViewById(R.id.convo);
-                addStyledTextViewToLayout(linearLayout, current_text, true);
-                current_text = null;
-            }
-            // lit up enter icon
-            button_lit_up(enter_icon);
-        }
-        else if(new_text.equals("$")){ // restart
-            // switch mode to Sign mode
-            current_text = null;
-            is_sign_mode = Boolean.TRUE;
-
-            // lit up restart icon
-            button_lit_up(restart_icon);
-
-            // To hide all icons
-            command_icon.setVisibility(View.GONE);
-
-        }
-        else if(new_text.equals("%")){ // delete
-            current_text = null;
-            // lit up delete icon
-            button_lit_up(delete_icon);
-        }
-        else if(new_text.equals("^")){ // exit
-            current_text = null;
-
-            // lit up exit icon
-            button_lit_up(exit_icon);
-
-            // To hide all icons
-            command_icon.setVisibility(View.GONE);
-
-            buttonStopCamera(null);
-        }
-        else{ // regular text
-            current_text = (current_text != null) ? current_text + new_text : new_text;
-        }
-        // set current message
-        TextView display_text = findViewById(R.id.display_text);
-        display_text.setText(current_text);
-
-        // Chatroom update
-        ScrollView scrollView = findViewById(R.id.scrollView);
-        scrollView.fullScroll(View.FOCUS_DOWN);
-    }
 
     private void button_lit_up(ImageView icon) {
         icon.setBackgroundColor(R.drawable.button_bg);
@@ -661,6 +593,118 @@ public class MainActivity extends AppCompatActivity {
         // show initial text
         TextView displayText = findViewById(R.id.display_text);
         displayText.setText("Enter a message");
+    }
+
+    private void return_text_processing(String new_text){
+        LinearLayout command_icon = findViewById(R.id.command_icon);
+        if (new_text.length() > 0 && new_text.charAt(0) == '@') {
+            // Check if the string is not empty and the first character is "@"
+            new_text = new_text.substring(1); // Remove the first character
+
+            // append new sentence
+            current_text = new_text;
+
+            // Switch mode to command mode
+            is_sign_mode = Boolean.FALSE;
+
+            // To hide all icons
+            command_icon.setVisibility(View.VISIBLE);
+
+            // set current message
+            TextView display_text = findViewById(R.id.display_text);
+            display_text.setText(current_text);
+        }
+        else if(new_text.equals("#")){ // enter
+            cmd_enter(null);
+        }
+        else if(new_text.equals("$")){ // restart
+            cmd_restart(null);
+        }
+        else if(new_text.equals("%")){ // delete
+            cmd_delete(null);
+        }
+        else if(new_text.equals("^")){ // exit
+            cmd_exit(null);
+        }
+        else{ // regular text
+            current_text = (current_text != null) ? current_text + new_text : new_text;
+
+            // set current message
+            TextView display_text = findViewById(R.id.display_text);
+            display_text.setText(current_text);
+        }
+
+        // Chatroom update
+        ScrollView scrollView = findViewById(R.id.scrollView);
+        scrollView.fullScroll(View.FOCUS_DOWN);
+    }
+
+    public void cmd_restart(View view) {
+        LinearLayout command_icon = findViewById(R.id.command_icon);
+        ImageView restart_icon = findViewById(R.id.restart);
+        // switch mode to Sign mode
+        current_text = null;
+        is_sign_mode = Boolean.TRUE;
+
+        // lit up restart icon
+        button_lit_up(restart_icon);
+
+        // To hide all icons
+        // command_icon.setVisibility(View.GONE);
+
+        // set current message
+        TextView display_text = findViewById(R.id.display_text);
+        display_text.setText(current_text);
+    }
+
+    public void cmd_exit(View view) {
+        LinearLayout command_icon = findViewById(R.id.command_icon);
+        ImageView exit_icon = findViewById(R.id.exit);
+        current_text = null;
+
+        // lit up exit icon
+        button_lit_up(exit_icon);
+
+        // To hide all icons
+        // command_icon.setVisibility(View.GONE);
+
+        buttonStopCamera(null);
+
+        // set current message
+        TextView display_text = findViewById(R.id.display_text);
+        display_text.setText(current_text);
+    }
+
+    public void cmd_delete(View view) {
+        ImageView delete_icon = findViewById(R.id.delete);
+        current_text = null;
+        // lit up delete icon
+        button_lit_up(delete_icon);
+
+        // set current message
+        TextView display_text = findViewById(R.id.display_text);
+        display_text.setText(current_text);
+    }
+
+    public void cmd_enter(View view) {
+        ImageView enter_icon = findViewById(R.id.send);
+        if (current_text != null) {
+            LinearLayout linearLayout = findViewById(R.id.convo);
+            addStyledTextViewToLayout(linearLayout, current_text, true);
+            current_text = null;
+        }
+        // lit up enter icon
+        button_lit_up(enter_icon);
+
+        // set current message
+        TextView display_text = findViewById(R.id.display_text);
+        display_text.setText(current_text);
+    }
+
+    public void send_test_message(View view) {
+        // Set the string to the fifth value when Button 5 is clicked
+        model_return = "good night! ";
+        return_text_processing(model_return);
     }
 
 }
