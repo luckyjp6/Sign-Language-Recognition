@@ -51,6 +51,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 import com.chaquo.python.PyObject;
 
@@ -78,9 +79,12 @@ public class MainActivity extends AppCompatActivity {
     private Python py;
     private String threadInstruction = "";
     private byte [] frame;
+    private int MAX_FRAME_NUM = 10;
+    private int collectedFrames = 0;
+    private byte [][] frames;
     private Bitmap bmp;
     private String model_return;
-    private Boolean is_sign_mode;
+    private Boolean is_sign_mode = Boolean.FALSE;
     private String current_text;
     private int skipCount = 0;
     private float drag_x, drag_y;
@@ -98,6 +102,8 @@ public class MainActivity extends AppCompatActivity {
 
         // Start Python
 //        initPython();
+
+        frames = new byte[MAX_FRAME_NUM][50000];
 
         // Request camera permission
         ActivityCompat.requestPermissions(this,
@@ -159,19 +165,48 @@ public class MainActivity extends AppCompatActivity {
                 // Get image
                 frame = new byte[length];
                 buffer.get(frame);
+//                frames[collectedFrames] = new byte[length];
+//                buffer.get(frames[collectedFrames]);
 
                 // Show preview
                 bmp = BitmapFactory.decodeByteArray(frame, 0, length);
+//                bmp = BitmapFactory.decodeByteArray(frames[collectedFrames], 0, length);
                 ImageView displayPicture = findViewById(R.id.picture);
                 displayPicture.setImageBitmap(bmp);
 
                 skipCount++;
 //
-                if (skipCount % 10 == 0) {
-                    // Send image to AI module
-                    mThread socketThread = new mThread();
-                    socketThread.start();
-                    if (skipCount % 50 == 0) processCapturedImage();
+                if (skipCount == 5) {
+                    skipCount = 0;
+                    mThread frameThread = new mThread();
+                    frameThread.start();
+//                    skipCount = 0;
+//                    frames[collectedFrames] = frame;
+//                    if (frames[collectedFrames] == null) return;
+
+                    collectedFrames++;
+//
+                    if (collectedFrames == MAX_FRAME_NUM) {
+                        collectedFrames = 0;
+                        try {
+                            frameThread.join();
+                        } catch ( InterruptedException e) {
+                            throw new RuntimeException();
+                        }
+
+                        mThread requestThread = new mThread();
+                        threadInstruction = "request";
+                        requestThread.start();
+
+                        try {
+                            requestThread.join();
+                        } catch (InterruptedException e) {
+                            throw new RuntimeException(e);
+                        }
+//                    }
+//                    exit(0);
+//                        processCapturedImage();
+                    }
                 }
 
                 image.close();
@@ -261,20 +296,44 @@ public class MainActivity extends AppCompatActivity {
 
     public class SocketClient {
         private Socket aiSever;
+        OutputStream outputStream;
 //        private PrintWriter printWriter;
         private BufferedReader bufferedReader;
 
         private void init () {
             try {
                 aiSever = new Socket("140.113.141.90", 12345);
+                outputStream = aiSever.getOutputStream();
+//                bufferedReader = new BufferedReader(new InputStreamReader(aiSever.getInputStream()));
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
         }
+//        private void send_msg(byte[] msg, int length) {
+//            init();
+//            try {
+//                if (length >= 0) outputStream.write(Integer.toString(length).getBytes());
+//                outputStream.write(msg);
+//                outputStream.flush();
+//            } catch (IOException e) {
+//                throw new RuntimeException(e);
+//            }
+//            close();
+//        }
+//        private byte[] recv_msg() {
+//
+//        }
         private void close() {
             if (bufferedReader != null) {
                 try {
                     bufferedReader.close();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            if (outputStream != null) {
+                try {
+                    outputStream.close();
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
@@ -290,9 +349,9 @@ public class MainActivity extends AppCompatActivity {
         public void send_init () {
             init();
 
-            OutputStream outputStream;
+//            OutputStream outputStream;
             try {
-                outputStream = aiSever.getOutputStream();
+//                outputStream = aiSever.getOutputStream();
                 outputStream.write("init".getBytes());
                 outputStream.flush();
             } catch (IOException e) {
@@ -302,25 +361,22 @@ public class MainActivity extends AppCompatActivity {
             close();
         }
         public void send_request() {
+            // Send request to server
             init();
-            OutputStream outputStream;
             try {
                 outputStream = aiSever.getOutputStream();
-                if (is_sign_mode) outputStream.write("request".getBytes());
+                if (is_sign_mode) outputStream.write("request_sign_mode".getBytes());
                 else outputStream.write("request".getBytes());
                 outputStream.flush();
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
 
+            // Get server response
             try {
                 bufferedReader = new BufferedReader(new InputStreamReader(aiSever.getInputStream()));
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-
-            try {
                 model_return = bufferedReader.readLine(); // read is also available, but it returns char[]
+                Log.d("############model return", model_return);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -328,24 +384,50 @@ public class MainActivity extends AppCompatActivity {
             close();
         }
         public void send_frame () {
-            init();
-//            Log.d("length", Integer.toString(frame.length));
-            OutputStream outputStream;
-            try {
+//            init();
+//            for (int i = 0; i < 10; i++) {
+                init();
+                try {
+//                outputStream = aiSever.getOutputStream();
+                    int length = frame.length;
+                    outputStream.write(Integer.toString(length).getBytes());
+                    outputStream.flush();
+                    outputStream.write(frame);
+                    outputStream.flush();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+                close();
+//            }
 
-                outputStream = aiSever.getOutputStream();
-                outputStream.write(Integer.toString(frame.length).getBytes());
-                outputStream.write(frame);
-//                bmp.compress(Bitmap.CompressFormat.JPEG, 50, outputStream);
-                outputStream.flush();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
+//            for (int i = 0; i < MAX_FRAME_NUM; i++) {
+////                // Send frames
+//                try {
+////                    // Send
+//                    outputStream = aiSever.getOutputStream();
+////                    if (frames[0] == null) return;
+//                    int length = frames[0].length;
+//                    outputStream.write(Integer.toString(length).getBytes());
+//                    outputStream.write(frames[0]);
+//                    outputStream.flush();
+//                } catch (IOException e) {
+//                    throw new RuntimeException(e);
+//                }
+//            }
 
-            if (skipCount == 50) {
-                send_request();
-                skipCount = 0;
-            }
+
+//                    // Get ACK
+////                    try {
+////                        bufferedReader = new BufferedReader(new InputStreamReader(aiSever.getInputStream()));
+////                        String ret = bufferedReader.readLine(); // read is also available, but it returns char[]
+////                    } catch (IOException e) {
+////                        throw new RuntimeException(e);
+////                    }
+//
+////            if (skipCount == 50) {
+////            send_request();
+////                skipCount = 0;
+////            }
 
             close();
         }
@@ -551,7 +633,7 @@ public class MainActivity extends AppCompatActivity {
                         cameraCaptureSession_imageReader = session;
 //                        captureRequestBuilder_imgReader.set(CaptureRequest.JPEG_ORIENTATION, 0);
                         captureRequestBuilder_imgReader.set(CaptureRequest.JPEG_QUALITY, (byte) 80);
-                        captureRequestBuilder_imgReader.set(CaptureRequest.SENSOR_EXPOSURE_TIME, (long)1);
+//                        captureRequestBuilder_imgReader.set(CaptureRequest.SENSOR_EXPOSURE_TIME, (long)1);
                         captureRequestBuilder_imgReader.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, CameraMetadata.CONTROL_AF_TRIGGER_START);
 
                         try {
