@@ -186,7 +186,7 @@ public class MainActivity extends AppCompatActivity {
                 image.close();
 
                 // check whether model send text -> if yes, show it on the screen
-                checkModelReturnText();
+                showTextOnScreen();
             }
         }, null);
     }
@@ -263,7 +263,6 @@ public class MainActivity extends AppCompatActivity {
                     socketClient.send_frame();
                     if(frameQueue.isTimeToSendRequest()){
                         socketClient.send_request();
-
                     }
 
                     // if buttonStop is on click stop the thread
@@ -380,11 +379,12 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void checkModelReturnText() {
+    private void showTextOnScreen() {
 //        Log.d("model return", model_return);
-        if (modelReturnQueue.isEmpty()) return;
-        String text = modelReturnQueue.dequeue();
-        return_text_processing(text);
+        while(!modelReturnQueue.isEmpty()){
+            String text = modelReturnQueue.dequeue();
+            return_text_processing(text);
+        }
     }
 
     public class textData extends ViewModel {
@@ -614,6 +614,7 @@ public class MainActivity extends AppCompatActivity {
         displayText.setText("");
 
         //start the socket thread
+        threadInstruction = "";
         mThread SocketThread = new mThread();
         SocketThread.start();
     }
@@ -637,6 +638,9 @@ public class MainActivity extends AppCompatActivity {
         // show initial text
         TextView displayText = findViewById(R.id.display_text);
         displayText.setText("Enter a message");
+
+        frameQueue.clear(); // clear frameQueue
+        showTextOnScreen(); // show remaining text on screen (clean modelReturnQueue
     }
 
 }
