@@ -385,50 +385,31 @@ public class MainActivity extends AppCompatActivity {
             close();
         }
         public void send_frame () {
-//            init();
-//            for (int i = 0; i < 10; i++) {
-                init();
-                try {
+
+            init();
+            try {
 //                outputStream = aiSever.getOutputStream();
-                    int length = frame.length;
-                    outputStream.write(Integer.toString(length).getBytes());
-                    outputStream.flush();
-                    outputStream.write(frame);
-                    outputStream.flush();
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-                close();
-//            }
+                int length = frame.length;
+                outputStream.write(Integer.toString(length).getBytes());
+                outputStream.flush();
+                outputStream.write(frame);
+                outputStream.flush();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
 
-//            for (int i = 0; i < MAX_FRAME_NUM; i++) {
-////                // Send frames
-//                try {
-////                    // Send
-//                    outputStream = aiSever.getOutputStream();
-////                    if (frames[0] == null) return;
-//                    int length = frames[0].length;
-//                    outputStream.write(Integer.toString(length).getBytes());
-//                    outputStream.write(frames[0]);
-//                    outputStream.flush();
-//                } catch (IOException e) {
-//                    throw new RuntimeException(e);
+//            Get ACK -> use return string
+//            try {
+//                bufferedReader = new BufferedReader(new InputStreamReader(aiSever.getInputStream()));
+//                String ret = bufferedReader.readLine(); // read is also available, but it returns char[]
+//                if (ret == "0") {
+//                    is_sign_mode = Boolean.FALSE;
+//                } else {
+//                    is_sign_mode = Boolean.TRUE;
 //                }
+//            } catch (IOException e) {
+//                throw new RuntimeException(e);
 //            }
-
-
-//                    // Get ACK
-////                    try {
-////                        bufferedReader = new BufferedReader(new InputStreamReader(aiSever.getInputStream()));
-////                        String ret = bufferedReader.readLine(); // read is also available, but it returns char[]
-////                    } catch (IOException e) {
-////                        throw new RuntimeException(e);
-////                    }
-//
-////            if (skipCount == 50) {
-////            send_request();
-////                skipCount = 0;
-////            }
 
             close();
         }
@@ -632,9 +613,9 @@ public class MainActivity extends AppCompatActivity {
                     public void onConfigured(@NonNull CameraCaptureSession session) {
                         cameraCaptureSession_imageReader = session;
 //                        captureRequestBuilder_imgReader.set(CaptureRequest.JPEG_ORIENTATION, 0);
-                        captureRequestBuilder_imgReader.set(CaptureRequest.JPEG_QUALITY, (byte) 80);
+//                        captureRequestBuilder_imgReader.set(CaptureRequest.JPEG_QUALITY, (byte) 80);
                         captureRequestBuilder_imgReader.set(CaptureRequest.SENSOR_EXPOSURE_TIME, (long)1);
-                        captureRequestBuilder_imgReader.set(CaptureRequest.CONTROL_AE_ANTIBANDING_MODE, CameraMetadata.CONTROL_AF_TRIGGER_START);
+                        captureRequestBuilder_imgReader.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, CameraMetadata.CONTROL_AF_TRIGGER_START);
 
                         try {
                             cameraCaptureSession_imageReader.setRepeatingRequest(captureRequestBuilder_imgReader.build(), null, null);
