@@ -24,4 +24,7 @@ public class ModelReturnQueue {
     public Boolean isEmpty() {
         return bufferQueue.isEmpty();
     }
+    public void clear(){
+        bufferQueue.clear();
+    }
 }

@@ -27,4 +27,7 @@ public class FrameQueue {
     public boolean isTimeToSendRequest(){
         return sent==0;
     }
+    public void clear(){
+        bufferQueue.clear();
+    }
 }
