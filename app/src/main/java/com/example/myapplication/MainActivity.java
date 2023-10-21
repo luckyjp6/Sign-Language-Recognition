@@ -138,7 +138,7 @@ public class MainActivity extends AppCompatActivity {
             throw new RuntimeException(e);
         }
         frameQueue = new FrameQueue();
-
+        modelReturnQueue = new ModelReturnQueue();
     }
 
 //    private void initPython() {
@@ -178,7 +178,7 @@ public class MainActivity extends AppCompatActivity {
 //
                 if (skipCount % 10 == 0) {
                     // Send image to AI module
-                    frameQueue.enqueue(buffer);
+                    frameQueue.enqueue(frame);
 //                    mThread socketThread = new mThread();
 //                    socketThread.start();
 //                    if (frameQueue.isTimeToSendRequest()) processCapturedImage();
@@ -353,9 +353,9 @@ public class MainActivity extends AppCompatActivity {
             init();
 //            Log.d("length", Integer.toString(frame.length));
             OutputStream outputStream;
-            ByteBuffer sendFrameByteBuffer =  frameQueue.dequeue();
-            byte[] sendFrame = new byte[sendFrameByteBuffer.remaining()];
-            sendFrameByteBuffer.get(sendFrame);
+         //   ByteBuffer sendFrameByteBuffer =  frameQueue.dequeue();
+            byte[] sendFrame = frameQueue.dequeue();
+           // sendFrameByteBuffer.get(sendFrame);
 
             try {
                 outputStream = aiSever.getOutputStream();
