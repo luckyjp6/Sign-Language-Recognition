@@ -21,4 +21,7 @@ public class ModelReturnQueue {
         }
         return bufferQueue.poll();
     }
+    public Boolean isEmpty() {
+        return bufferQueue.isEmpty();
+    }
 }

@@ -181,10 +181,12 @@ public class MainActivity extends AppCompatActivity {
                     frameQueue.enqueue(buffer);
 //                    mThread socketThread = new mThread();
 //                    socketThread.start();
-                    if (frameQueue.isTimeToSendRequest()) processCapturedImage();
+//                    if (frameQueue.isTimeToSendRequest()) processCapturedImage();
                 }
                 image.close();
 
+                // check whether model send text -> if yes, show it on the screen
+                checkModelReturnText();
             }
         }, null);
     }
@@ -378,10 +380,11 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void processCapturedImage() {
+    private void checkModelReturnText() {
 //        Log.d("model return", model_return);
-        if (model_return == null) model_return = "";
-        return_text_processing(model_return);
+        if (modelReturnQueue.isEmpty()) return;
+        String text = modelReturnQueue.dequeue();
+        return_text_processing(text);
     }
 
     public class textData extends ViewModel {
