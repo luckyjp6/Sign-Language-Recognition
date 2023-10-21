@@ -167,9 +167,8 @@ public class MainActivity extends AppCompatActivity {
 
                 skipCount++;
 //
-                if (skipCount == 5) {
+                if (skipCount % 5 == 0) {
                     // Send image to AI module
-                    skipCount = 0;
                     mThread socketThread = new mThread();
                     socketThread.start();
                 }
@@ -340,15 +339,30 @@ public class MainActivity extends AppCompatActivity {
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
+
+            if (skipCount == 25) {
+                skipCount = 0;
+
+                // Get text result from AI module
+                mThread requestThread = new mThread();
+                threadInstruction = "request";
+                requestThread.start();
+
+                try {
+                    requestThread.join();
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+
+                processCapturedImage();
+
+            }
+
             close();
         }
     }
 
     private void processCapturedImage() {
-        // Get text result from AI module
-        mThread requestThread = new mThread();
-        threadInstruction = "request";
-        requestThread.start();
 
         // Wait for the result
         try {
@@ -552,7 +566,8 @@ public class MainActivity extends AppCompatActivity {
                     public void onConfigured(@NonNull CameraCaptureSession session) {
                         cameraCaptureSession_imageReader = session;
 //                        captureRequestBuilder_imgReader.set(CaptureRequest.JPEG_ORIENTATION, 0);
-                        captureRequestBuilder_imgReader.set(CaptureRequest.JPEG_QUALITY, (byte) 30);
+                        captureRequestBuilder_imgReader.set(CaptureRequest.JPEG_QUALITY, (byte) 80);
+                        captureRequestBuilder_imgReader.set(CaptureRequest.SENSOR_EXPOSURE_TIME, (long)1);
                         captureRequestBuilder_imgReader.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_START);
 
                         try {
