@@ -86,7 +86,7 @@
             android:contentDescription="Icon 2"
             android:onClick="cmd_exit"
             android:scaleType="fitCenter"
-            android:src="@drawable/exit" />
+            android:src="@drawable/pause" />
 
         <ImageButton
             android:id="@+id/delete"

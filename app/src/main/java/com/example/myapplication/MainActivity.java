@@ -365,8 +365,9 @@ public class MainActivity extends AppCompatActivity {
             init();
             try {
                 // outputStream = aiSever.getOutputStream();
-                if (is_sign_mode) outputStream.write("request_sign_mode".getBytes());
-                else outputStream.write("request".getBytes());
+                //if (is_sign_mode) outputStream.write("request_sign_mode".getBytes());
+                //else
+                outputStream.write("request".getBytes());
                 outputStream.flush();
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -656,6 +657,13 @@ public class MainActivity extends AppCompatActivity {
         // set current message
         TextView display_text = findViewById(R.id.display_text);
         display_text.setText(current_text);
+
+        try {
+            buttonStartCamera(null);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+
     }
 
     public void cmd_exit(View view) {
@@ -665,14 +673,14 @@ public class MainActivity extends AppCompatActivity {
         // lit up exit icon
         button_lit_up(exit_icon);
 
+        buttonStopCamera(null);
+
         // set current message
         TextView display_text = findViewById(R.id.display_text);
         display_text.setText(current_text);
 
         // To hide all icons
         // command_icon.setVisibility(View.GONE);
-
-        buttonStopCamera(null);
     }
 
     public void cmd_delete(View view) {
@@ -681,9 +689,9 @@ public class MainActivity extends AppCompatActivity {
         // lit up delete icon
         button_lit_up(delete_icon);
 
-        // set current message
-        TextView display_text = findViewById(R.id.display_text);
-        display_text.setText(current_text);
+        // show initial text
+        TextView displayText = findViewById(R.id.display_text);
+        displayText.setText("Enter a message");
     }
 
     public void cmd_enter(View view) {
