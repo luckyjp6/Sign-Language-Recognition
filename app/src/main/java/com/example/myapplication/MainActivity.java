@@ -89,6 +89,8 @@ public class MainActivity extends AppCompatActivity {
     private int skipCount = 0;
     private float drag_x, drag_y;
     private Boolean cameraInScreen;
+    private Boolean is_robot;
+    private robotResponse robot;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -125,6 +127,10 @@ public class MainActivity extends AppCompatActivity {
         // Init imageReader, start image listener
         initImageReader();
         setupImageReaderListener();
+
+        // robot response
+        robot = new robotResponse();
+        robot.welcome_mas();
 
 
         // Set camera manager
@@ -210,7 +216,6 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 image.close();
-
             }
         }, null);
     }
@@ -390,6 +395,8 @@ public class MainActivity extends AppCompatActivity {
             init();
             try {
                 // outputStream = aiSever.getOutputStream();
+                //if (is_sign_mode) outputStream.write("request_sign_mode".getBytes());
+                //else
                 outputStream.write("request".getBytes());
                 outputStream.flush();
             } catch (IOException e) {
@@ -445,19 +452,44 @@ public class MainActivity extends AppCompatActivity {
         return_text_processing(model_return);
     }
 
-    public class textData extends ViewModel {
-        public  textData(){
-            responseSet = new ArrayList<>(Arrays.asList("要不要一起去吃飯?","要不要找更多人?"));
-        }
+    public class robotResponse extends ViewModel {
         private int resIndex = 0;
         private ArrayList<String> responseSet;
-        public String getResponse(){
-            if(resIndex<responseSet.size()){
-                return responseSet.get(resIndex++);
-            }
-            else return "";
+        private Boolean first_enter;
+        public  robotResponse(){
+            first_enter = Boolean.TRUE;
+            responseSet = new ArrayList<>(Arrays.asList("你好~", "對呀","我是聽人"));
         }
+        public void getResponse(String text){
+            String response;
+            if( text.contains("?")){
+                response = responseSet.get(1);
+            }
+            else if( text.contains("聽人") ){
+                response = responseSet.get(2);
+            }
+            else {
+                response = "你在說什麼？";
+            }
 
+            LinearLayout linearLayout = findViewById(R.id.convo);
+            addStyledTextViewToLayout(linearLayout, response, false);
+
+            // Chatroom update
+            ScrollView scrollView = findViewById(R.id.scrollView);
+            scrollView.fullScroll(View.FOCUS_DOWN);
+        }
+        public void welcome_mas(){
+            if (first_enter){
+                first_enter = Boolean.FALSE;
+                LinearLayout linearLayout = findViewById(R.id.convo);
+                addStyledTextViewToLayout(linearLayout, responseSet.get(0), false);
+
+                // Chatroom update
+                ScrollView scrollView = findViewById(R.id.scrollView);
+                scrollView.fullScroll(View.FOCUS_DOWN);
+            }
+        }
     }
 
 
@@ -622,6 +654,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void return_text_processing(String new_text){
         LinearLayout command_icon = findViewById(R.id.command_icon);
+
         if (new_text.length() > 0 && new_text.charAt(0) == '@') {
             // Check if the string is not empty and the first character is "@"
             new_text = new_text.substring(1); // Remove the first character
@@ -651,7 +684,7 @@ public class MainActivity extends AppCompatActivity {
         else if(new_text.equals("^")){ // exit
             cmd_exit(null);
         }
-        else{ // regular text
+        else { // regular text
             current_text = (current_text != null) ? current_text + new_text : new_text;
 
             // set current message
@@ -680,12 +713,18 @@ public class MainActivity extends AppCompatActivity {
         // set current message
         TextView display_text = findViewById(R.id.display_text);
         display_text.setText(current_text);
+
+        try {
+            buttonStartCamera(null);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+
     }
 
     public void cmd_exit(View view) {
         LinearLayout command_icon = findViewById(R.id.command_icon);
         ImageView exit_icon = findViewById(R.id.exit);
-        current_text = null;
 
         
         mThread stopThread = new mThread();
@@ -695,16 +734,13 @@ public class MainActivity extends AppCompatActivity {
         // lit up exit icon
         button_lit_up(exit_icon);
 
-        // To hide all icons
-        // command_icon.setVisibility(View.GONE);
-
         buttonStopCamera(null);
 
         // set current message
         TextView display_text = findViewById(R.id.display_text);
         display_text.setText(current_text);
 
-        
+    
         try {
             stopThread.join();
         } catch (InterruptedException e) {
@@ -720,9 +756,9 @@ public class MainActivity extends AppCompatActivity {
         // lit up delete icon
         button_lit_up(delete_icon);
 
-        // set current message
-        TextView display_text = findViewById(R.id.display_text);
-        display_text.setText(current_text);
+        // show initial text
+        TextView displayText = findViewById(R.id.display_text);
+        displayText.setText("Enter a message");
     }
 
     public void cmd_enter(View view) {
@@ -730,6 +766,8 @@ public class MainActivity extends AppCompatActivity {
         if (current_text != null) {
             LinearLayout linearLayout = findViewById(R.id.convo);
             addStyledTextViewToLayout(linearLayout, current_text, true);
+
+            robot.getResponse(current_text);
             current_text = null;
         }
         // lit up enter icon
@@ -737,7 +775,7 @@ public class MainActivity extends AppCompatActivity {
 
         // set current message
         TextView display_text = findViewById(R.id.display_text);
-        display_text.setText(current_text);
+        display_text.setText("Enter a message");
     }
 
     public void send_test_message(View view) {
